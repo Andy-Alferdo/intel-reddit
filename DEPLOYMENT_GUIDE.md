@@ -105,7 +105,60 @@ supabase secrets set MODEL_SERVER_URL=https://your-model-server.com
 2. Add your custom domain
 3. Update DNS records
 
-## 6. Model Server Deployment Example (Railway)
+## 6. Model Server Deployment
+
+The ML model server is now included in the repository but requires manual setup due to the large model file size.
+
+### Step 1: Add the Model File
+The BERT model file (`model.safetensors`, 255MB) is too large for GitHub. Add it manually:
+
+```bash
+# Copy from your original project
+cp "d:\Books & Notes\FYP 2\Development\reddit-sleuth-forensics-web-main\models\model.safetensors" "d:\Books & Notes\FYP 2\Development\intel-reddit\models\"
+```
+
+### Step 2: Deploy to Railway (Recommended)
+
+#### Option A: Direct Deployment
+1. **Copy the model file** to the intel-reddit/models folder
+2. **Push to GitHub** (the model file is in .gitignore, so you'll need to temporarily remove it)
+3. **Deploy to Railway** - it will include all files
+
+#### Option B: Upload After Deployment
+1. **Deploy without model** first
+2. **Upload model via Railway dashboard** or console
+3. **Restart the service**
+
+### Step 3: Alternative Deployment Options
+
+#### Render.com
+- Similar process to Railway
+- Use build hooks to download model if needed
+
+#### Google Cloud Run
+- Containerize the Flask app
+- Include model in container image
+- Deploy to Cloud Run
+
+### Step 4: Model Server Features
+- **BERT-based sentiment analysis** (negative/neutral/positive)
+- **SHAP and LIME explanations** for interpretability
+- **Spacy location extraction** (GPE/LOC entities)
+- **REST API** at `/predict` endpoint
+- **Production-ready** with proper error handling
+
+### Step 5: Testing the Model Server
+```bash
+# Test locally
+python model_server.py
+
+# Test API
+curl -X POST http://localhost:5000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"posts": [{"title": "I love this!", "selftext": ""}], "comments": []}'
+```
+
+## 7. Complete Production Setup
 
 ### 1. Prepare for Railway
 ```bash
