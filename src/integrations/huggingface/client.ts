@@ -53,8 +53,8 @@ export interface DeepAnalysisResult {
  */
 async function callHuggingFaceAPI(endpoint: string, data: any[]): Promise<any> {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  // Try /call/ for async or /run/ for sync - Gradio 4.x uses /call/
-  const url = `${HF_SPACE_URL}/call/${cleanEndpoint}`;
+  // Gradio 4.x API is at /gradio_api/run/ for synchronous calls
+  const url = `${HF_SPACE_URL}/gradio_api/run/${cleanEndpoint}`;
   console.log('[HF Client] Calling:', url);
 
   const response = await fetch(url, {
