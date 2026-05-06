@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
+import { analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 
 const INITIAL_VISIBLE = 10;
 
@@ -932,19 +933,17 @@ const UserProfiling = () => {
       setTargetProgress(60);
 
       // Analyze content for sentiment and locations
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
-        body: {
-          posts: redditData.posts || [],
-          comments: redditData.comments || []
-        }
-      });
-
-      if (analysisError) {
+      let analysisData = null;
+      try {
+        analysisData = await analyzeWithHuggingFace(
+          redditData.posts || [],
+          redditData.comments || []
+        );
+        console.log('Hugging Face analysis completed');
+      } catch (analysisError) {
         console.error('Analysis error:', analysisError);
         // Continue even if analysis fails
       }
-
-      console.log('Analysis completed');
       setTargetProgress(90);
 
       // Calculate account age

@@ -353,15 +353,13 @@ const Analysis = () => {
       const postsForAnalysis = [...recent20Pre, ...uniqueTop];
       
       try {
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: []
-          }
-        });
+        const hfResult = await analyzeWithHuggingFace(
+          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          []
+        );
 
-        if (!analysisError && analysisData) {
-          postSentiments = analysisData.postSentiments || [];
+        if (hfResult) {
+          postSentiments = hfResult.postSentiments || [];
           
           // Attach sentiment to each post by index (AI returns in same order as sent)
           postsForAnalysis.forEach((post: any, idx: number) => {
@@ -526,15 +524,13 @@ const Analysis = () => {
       let postSentiments: SentimentItem[] = [];
       
       try {
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: []
-          }
-        });
+        const hfResult = await analyzeWithHuggingFace(
+          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          []
+        );
 
-        if (!analysisError && analysisData) {
-          postSentiments = analysisData.postSentiments || [];
+        if (hfResult) {
+          postSentiments = hfResult.postSentiments || [];
           
           // Attach sentiment to each post by index
           postsForAnalysis.forEach((post: any, idx: number) => {
@@ -798,14 +794,12 @@ const Analysis = () => {
       let postSentiments: any[] = [];
       let commentSentiments: any[] = [];
       try {
-        const { data: analysisData } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
-          }
-        });
-        if (analysisData) {
-          postSentiments = (analysisData.postSentiments || []).map((s: any, i: number) => ({
+        const hfResult = await analyzeWithHuggingFace(
+          posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
+        );
+        if (hfResult) {
+          postSentiments = (hfResult.postSentiments || []).map((s: any, i: number) => ({
             ...s,
             subreddit: posts[i]?.subreddit || '',
             created_utc: posts[i]?.created_utc || 0,
@@ -813,7 +807,7 @@ const Analysis = () => {
             permalink: posts[i]?.permalink || '',
             body: posts[i]?.selftext || ''
           }));
-          commentSentiments = (analysisData.commentSentiments || []).map((s: any, i: number) => ({
+          commentSentiments = (hfResult.commentSentiments || []).map((s: any, i: number) => ({
             ...s,
             subreddit: comments[i]?.subreddit || '',
             created_utc: comments[i]?.created_utc || 0,
