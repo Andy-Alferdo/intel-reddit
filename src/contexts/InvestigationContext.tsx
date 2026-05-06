@@ -220,30 +220,84 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
     try {
       console.log(`[InvestigationContext] Saving Reddit content: ${posts.length} posts, ${comments.length} comments, source: ${source}`);
       
-      // Save posts and comments in parallel
-      const [postsResult, commentsResult] = await Promise.all([
-        posts.length > 0 ? callDataStore('savePosts', { posts, source }, currentCase.id) : Promise.resolve({ inserted: 0, errors: 0 }),
-        comments.length > 0 ? callDataStore('saveComments', { comments, source }, currentCase.id) : Promise.resolve({ inserted: 0, errors: 0 })
-      ]);
+      let postsInserted = 0;
+      let commentsInserted = 0;
 
-      const totalInserted = (postsResult.inserted || 0) + (commentsResult.inserted || 0);
-      const totalErrors = (postsResult.errors || 0) + (commentsResult.errors || 0);
+      // Save posts directly using Supabase client
+      if (posts.length > 0) {
+        const postsToInsert = posts.map((post: any) => ({
+          post_id: post.id || post.name,
+          case_id: currentCase.id,
+          author: post.author,
+          subreddit: post.subreddit,
+          title: post.title,
+          selftext: post.selftext,
+          permalink: post.permalink,
+          created_utc: post.created_utc ? new Date(post.created_utc * 1000).toISOString() : null,
+          score: post.score,
+          num_comments: post.num_comments,
+          url: post.url,
+          over_18: post.over_18 || false,
+          is_original_content: post.is_original_content || false,
+          stored_by_function: 'frontend',
+          investigator_username: source || 'unknown',
+        }));
 
-      console.log(`[InvestigationContext] Reddit content saved: ${totalInserted} items inserted, ${totalErrors} errors`);
-      
-      if (totalErrors > 0) {
-        console.warn(`[InvestigationContext] Some Reddit content failed to save: ${totalErrors} errors`);
+        const { data: insertedPosts, error: postsError } = await supabase
+          .from('reddit_posts')
+          .insert(postsToInsert)
+          .select('id');
+
+        if (postsError) {
+          console.error('[InvestigationContext] Insert posts error:', postsError);
+        } else {
+          postsInserted = insertedPosts?.length || 0;
+        }
       }
+
+      // Save comments directly using Supabase client
+      if (comments.length > 0) {
+        const commentsToInsert = comments.map((comment: any) => ({
+          comment_id: comment.id || comment.name,
+          case_id: currentCase.id,
+          author: comment.author,
+          body: comment.body,
+          subreddit: comment.subreddit,
+          link_title: comment.link_title,
+          permalink: comment.permalink,
+          created_utc: comment.created_utc ? new Date(comment.created_utc * 1000).toISOString() : null,
+          score: comment.score,
+          parent_id: comment.parent_id,
+          is_submitter: comment.is_submitter || false,
+          stored_by_function: 'frontend',
+          investigator_username: source || 'unknown',
+        }));
+
+        const { data: insertedComments, error: commentsError } = await supabase
+          .from('reddit_comments')
+          .insert(commentsToInsert)
+          .select('id');
+
+        if (commentsError) {
+          console.error('[InvestigationContext] Insert comments error:', commentsError);
+        } else {
+          commentsInserted = insertedComments?.length || 0;
+        }
+      }
+
+      const totalInserted = postsInserted + commentsInserted;
+
+      console.log(`[InvestigationContext] Reddit content saved: ${totalInserted} items inserted (${postsInserted} posts, ${commentsInserted} comments)`);
 
       // Emit update to refresh admin dashboard
       emitCaseDataUpdated(currentCase.id, 'redditContent');
       
-      return { postsResult, commentsResult, totalInserted, totalErrors };
+      return { postsResult: { inserted: postsInserted }, commentsResult: { inserted: commentsInserted }, totalInserted };
     } catch (error: any) {
       console.error('[InvestigationContext] Failed to save Reddit content:', error);
       throw error;
     }
-  }, [currentCase, callDataStore, emitCaseDataUpdated]);
+  }, [currentCase, emitCaseDataUpdated]);
 
   // Keep current case in sync with localStorage selection (single-tab safe)
   useEffect(() => {
