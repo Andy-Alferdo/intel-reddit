@@ -52,7 +52,9 @@ export interface DeepAnalysisResult {
  * @returns API response
  */
 async function callHuggingFaceAPI(endpoint: string, data: any[]): Promise<any> {
-  const url = `${HF_SPACE_URL}/run/${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  const url = `${HF_SPACE_URL}/run/${cleanEndpoint}`;
+  console.log('[HF Client] Calling:', url);
 
   const response = await fetch(url, {
     method: "POST",
