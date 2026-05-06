@@ -1,0 +1,17 @@
+[build]
+  command = "node ./node_modules/vite/bin/vite.js build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[dev]
+  command = "npm run dev"
+  targetPort = 8080
+  port = 8888
+  publish = "dist"
