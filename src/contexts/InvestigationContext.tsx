@@ -443,9 +443,38 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
   // Save to database
   const saveUserProfileToDb = useCallback(async (profile: UserProfileData) => {
     if (!currentCase?.id) return;
-    await callDataStore('saveUserProfile', profile, currentCase.id);
-    emitCaseDataUpdated(currentCase.id, 'userProfiles');
-  }, [currentCase, callDataStore, emitCaseDataUpdated]);
+    try {
+      const { error } = await supabase
+        .from('user_profiles_analyzed')
+        .upsert({
+          case_id: currentCase.id,
+          username: profile.username,
+          comment_karma: profile.commentKarma,
+          post_karma: profile.postKarma,
+          total_karma: profile.totalKarma,
+          account_age: profile.accountAge,
+          active_subreddits: profile.activeSubreddits,
+          activity_pattern: profile.activityPattern,
+          analyzed_at: new Date().toISOString(),
+          behavior_patterns: profile.behaviorPatterns,
+          comment_sentiments: profile.commentSentiments,
+          location_indicators: profile.locationIndicators,
+          post_sentiments: profile.postSentiments,
+          sentiment_analysis: profile.sentimentAnalysis,
+          word_cloud: profile.wordCloud,
+        });
+      
+      if (error) {
+        console.error('[InvestigationContext] Save user profile error:', error);
+        throw error;
+      }
+      
+      emitCaseDataUpdated(currentCase.id, 'userProfiles');
+    } catch (error) {
+      console.error('[InvestigationContext] Failed to save user profile:', error);
+      throw error;
+    }
+  }, [currentCase, emitCaseDataUpdated]);
 
   const addMonitoringSession = (session: MonitoringData) => {
     setMonitoringSessions(prev => [...prev, session]);
@@ -458,14 +487,33 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
     }
     try {
       console.log('[InvestigationContext] Saving monitoring session:', session.targetName, 'to case:', currentCase.id);
-      await callDataStore('saveMonitoringSession', session, currentCase.id);
+      const { error } = await supabase
+        .from('monitoring_sessions')
+        .upsert({
+          case_id: currentCase.id,
+          target_name: session.targetName,
+          created_by: session.profileData?.userId || null,
+          search_type: session.searchType,
+          activities: session.activities,
+          profile_data: session.profileData,
+          started_at: session.startedAt,
+          ended_at: session.endedAt,
+          new_activity_count: session.newActivityCount,
+          word_cloud_data: session.wordCloudData,
+        });
+      
+      if (error) {
+        console.error('[InvestigationContext] Save monitoring session error:', error);
+        throw error;
+      }
+      
       emitCaseDataUpdated(currentCase.id, 'monitoringSessions');
       console.log('[InvestigationContext] Monitoring session saved successfully');
     } catch (err: any) {
       console.error('[InvestigationContext] Failed to save monitoring session:', err);
       throw err;
     }
-  }, [currentCase, callDataStore, emitCaseDataUpdated]);
+  }, [currentCase, emitCaseDataUpdated]);
 
   const addKeywordAnalysis = (analysis: KeywordAnalysisData) => {
     setKeywordAnalyses(prev => {
@@ -481,14 +529,28 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 
   const saveKeywordAnalysisToDb = useCallback(async (analysis: KeywordAnalysisData) => {
     if (!currentCase?.id) return;
-    await callDataStore('saveAnalysis', {
-      analysisType: 'keyword',
-      target: analysis.keyword,
-      resultData: analysis,
-      sentimentData: analysis.sentimentChartData,
-    }, currentCase.id);
-    emitCaseDataUpdated(currentCase.id, 'keywordAnalyses');
-  }, [currentCase, callDataStore, emitCaseDataUpdated]);
+    try {
+      const { error } = await supabase
+        .from('analysis_results')
+        .insert({
+          case_id: currentCase.id,
+          analysis_type: 'keyword',
+          target: analysis.keyword,
+          result_data: analysis,
+          sentiment_data: analysis.sentimentChartData,
+        });
+      
+      if (error) {
+        console.error('[InvestigationContext] Save keyword analysis error:', error);
+        throw error;
+      }
+      
+      emitCaseDataUpdated(currentCase.id, 'keywordAnalyses');
+    } catch (error) {
+      console.error('[InvestigationContext] Failed to save keyword analysis:', error);
+      throw error;
+    }
+  }, [currentCase, emitCaseDataUpdated]);
 
   const addCommunityAnalysis = (analysis: CommunityAnalysisData) => {
     setCommunityAnalyses(prev => {
@@ -504,14 +566,28 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 
   const saveCommunityAnalysisToDb = useCallback(async (analysis: CommunityAnalysisData) => {
     if (!currentCase?.id) return;
-    await callDataStore('saveAnalysis', {
-      analysisType: 'community',
-      target: analysis.name,
-      resultData: analysis,
-      sentimentData: analysis.sentimentChartData,
-    }, currentCase.id);
-    emitCaseDataUpdated(currentCase.id, 'communityAnalyses');
-  }, [currentCase, callDataStore, emitCaseDataUpdated]);
+    try {
+      const { error } = await supabase
+        .from('analysis_results')
+        .insert({
+          case_id: currentCase.id,
+          analysis_type: 'community',
+          target: analysis.name,
+          result_data: analysis,
+          sentiment_data: analysis.sentimentChartData,
+        });
+      
+      if (error) {
+        console.error('[InvestigationContext] Save community analysis error:', error);
+        throw error;
+      }
+      
+      emitCaseDataUpdated(currentCase.id, 'communityAnalyses');
+    } catch (error) {
+      console.error('[InvestigationContext] Failed to save community analysis:', error);
+      throw error;
+    }
+  }, [currentCase, emitCaseDataUpdated]);
 
   const addLinkAnalysis = (analysis: LinkAnalysisData) => {
     setLinkAnalyses(prev => {
@@ -527,13 +603,27 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 
   const saveLinkAnalysisToDb = useCallback(async (analysis: LinkAnalysisData) => {
     if (!currentCase?.id) return;
-    await callDataStore('saveAnalysis', {
-      analysisType: 'link',
-      target: analysis.primaryUser,
-      resultData: analysis,
-    }, currentCase.id);
-    emitCaseDataUpdated(currentCase.id, 'linkAnalyses');
-  }, [currentCase, callDataStore, emitCaseDataUpdated]);
+    try {
+      const { error } = await supabase
+        .from('analysis_results')
+        .insert({
+          case_id: currentCase.id,
+          analysis_type: 'link',
+          target: analysis.primaryUser,
+          result_data: analysis,
+        });
+      
+      if (error) {
+        console.error('[InvestigationContext] Save link analysis error:', error);
+        throw error;
+      }
+      
+      emitCaseDataUpdated(currentCase.id, 'linkAnalyses');
+    } catch (error) {
+      console.error('[InvestigationContext] Failed to save link analysis:', error);
+      throw error;
+    }
+  }, [currentCase, emitCaseDataUpdated]);
 
   const clearUserProfiles = () => setUserProfiles([]);
   const clearMonitoringSessions = () => setMonitoringSessions([]);
