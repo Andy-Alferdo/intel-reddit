@@ -1,7 +1,21 @@
-// Hugging Face Space API Client
+// Hugging Face Space API Client using official @gradio/client
 // Connects to deployed model at: https://takeda-shingen-intel-reddit-analyzer.hf.space
 
+import { Client } from "@gradio/client";
+
 const HF_SPACE_URL = import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space";
+
+// Cached client instance
+let gradioClient: any = null;
+
+async function getClient(): Promise<any> {
+  if (!gradioClient) {
+    console.log('[HF Client] Connecting to:', HF_SPACE_URL);
+    gradioClient = await Client.connect(HF_SPACE_URL);
+    console.log('[HF Client] Connected successfully');
+  }
+  return gradioClient;
+}
 
 interface RedditPost {
   title: string;
@@ -46,37 +60,6 @@ export interface DeepAnalysisResult {
 }
 
 /**
- * Call Hugging Face Space API with proper Gradio 4.x format
- * @param endpoint API endpoint name
- * @param data Array of data parameters
- * @returns API response
- */
-async function callHuggingFaceAPI(endpoint: string, data: any[]): Promise<any> {
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  // Gradio 4.x API is at /gradio_api/run/ for synchronous calls
-  const url = `${HF_SPACE_URL}/gradio_api/run/${cleanEndpoint}`;
-  console.log('[HF Client] Calling:', url);
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ data }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`HF API error ${response.status}: ${errorText}`);
-  }
-
-  const result = await response.json();
-
-  // Gradio 4.x returns { data: [...] } format
-  return result.data ? result.data[0] : result;
-}
-
-/**
  * Analyze Reddit content using Hugging Face Space
  * @param posts Array of Reddit posts
  * @param comments Array of Reddit comments
@@ -87,10 +70,13 @@ export async function analyzeWithHuggingFace(
   comments: RedditComment[]
 ): Promise<AnalysisResult> {
   try {
-    const hfResult = await callHuggingFaceAPI("/analyze_reddit_content", [
+    const client = await getClient();
+    const result = await client.predict("/analyze_reddit_content", [
       JSON.stringify(posts),
       JSON.stringify(comments)
     ]);
+
+    const hfResult = result.data;
 
     // Transform snake_case to camelCase and add explanation field
     const transformSentiment = (item: any): SentimentItem => ({
@@ -131,7 +117,9 @@ export async function analyzeSingleText(text: string): Promise<{
   all_probabilities: Record<string, number>;
   text_preview: string;
 }> {
-  return await callHuggingFaceAPI("/analyze_sentiment", [text]);
+  const client = await getClient();
+  const result = await client.predict("/analyze_sentiment", [text]);
+  return result.data;
 }
 
 /**
@@ -140,7 +128,9 @@ export async function analyzeSingleText(text: string): Promise<{
  * @returns Detailed analysis with word importance scores
  */
 export async function analyzeDeep(text: string): Promise<DeepAnalysisResult> {
-  return await callHuggingFaceAPI("/deep_analyze", [text]);
+  const client = await getClient();
+  const result = await client.predict("/deep_analyze", [text]);
+  return result.data;
 }
 
 /**
@@ -157,11 +147,13 @@ export async function predict(
   comments_json: string,
   deep_text?: string
 ): Promise<any> {
-  return await callHuggingFaceAPI("/predict", [
+  const client = await getClient();
+  const result = await client.predict("/predict", [
     posts_json,
     comments_json,
     deep_text || ""
   ]);
+  return result.data;
 }
 
 /**
@@ -186,7 +178,7 @@ export async function checkSpaceStatus(): Promise<boolean> {
  */
 export async function wakeUpSpace(): Promise<boolean> {
   let attempts = 0;
-  const maxAttempts = 30; // Try for ~2.5 minutes (5 seconds * 30)
+  const maxAttempts = 30;
 
   while (attempts < maxAttempts) {
     const isReady = await checkSpaceStatus();
