@@ -245,7 +245,7 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 
         const { data: insertedPosts, error: postsError } = await supabase
           .from('reddit_posts')
-          .upsert(postsToInsert, { onConflict: 'ignore' })
+          .upsert(postsToInsert)
           .select('id');
 
         if (postsError) {
@@ -275,7 +275,7 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 
         const { data: insertedComments, error: commentsError } = await supabase
           .from('reddit_comments')
-          .upsert(commentsToInsert, { onConflict: 'ignore' })
+          .upsert(commentsToInsert)
           .select('id');
 
         if (commentsError) {
