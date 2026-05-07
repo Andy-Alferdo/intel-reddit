@@ -223,99 +223,80 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
       let postsInserted = 0;
       let commentsInserted = 0;
 
-      // Save posts directly using Supabase client
+      // ============================================================
+// SAVE REDDIT POSTS — handles duplicates correctly
+// ============================================================
       if (posts.length > 0) {
-        // Check for existing posts first
-        const postIds = posts.map((post: any) => post.id || post.name);
-        const { data: existingPosts } = await supabase
+        const postsToSave = posts.map((post: any) => ({
+          post_id: post.id || post.name,
+          case_id: currentCase.id,
+          title: post.title ?? '',
+          selftext: post.selftext ?? '',
+          author: post.author ?? '[deleted]',
+          subreddit: post.subreddit ?? '',
+          score: post.score ?? 0,
+          num_comments: post.num_comments ?? 0,
+          url: post.url ?? '',
+          permalink: post.permalink ?? '',
+          created_utc: post.created_utc
+            ? new Date(post.created_utc * 1000).toISOString()
+            : new Date().toISOString(),
+          over_18: post.over_18 || false,
+          is_original_content: post.is_original_content || false,
+          stored_by_function: 'frontend',
+          investigator_username: source || 'unknown',
+        }));
+
+        const { error: postsError } = await supabase
           .from('reddit_posts')
-          .select('id')
-          .in('post_id', `(${postIds.join(',')})`);
+          .upsert(postsToSave, {
+            onConflict: 'post_id,case_id',
+            ignoreDuplicates: true,
+          });
 
-        const newPosts = posts.filter((post: any) => {
-          const postId = post.id || post.name;
-          return !existingPosts?.some(existing => existing.post_id === postId);
-        });
-
-        if (newPosts.length === 0) {
-          console.log('[InvestigationContext] All posts already exist, skipping insert');
-          postsInserted = 0;
+        if (postsError) {
+          console.error('❌ Posts upsert error:', postsError.message, postsError.details);
         } else {
-          const postsToInsert = newPosts.map((post: any) => ({
-            post_id: post.id || post.name,
-            case_id: currentCase.id,
-            author: post.author,
-            subreddit: post.subreddit,
-            title: post.title,
-            selftext: post.selftext,
-            permalink: post.permalink,
-            created_utc: post.created_utc ? new Date(post.created_utc * 1000).toISOString() : null,
-            score: post.score,
-            num_comments: post.num_comments,
-            url: post.url,
-            over_18: post.over_18 || false,
-            is_original_content: post.is_original_content || false,
-            stored_by_function: 'frontend',
-            investigator_username: source || 'unknown',
-          }));
-
-          const { data: insertedPosts, error: postsError } = await supabase
-            .from('reddit_posts')
-            .insert(postsToInsert)
-            .select('id');
-
-          if (postsError) {
-            console.error('[InvestigationContext] Insert posts error:', postsError);
-          } else {
-            postsInserted = insertedPosts?.length || 0;
-          }
+          postsInserted = postsToSave.length;
+          console.log(`✅ Posts saved/skipped: ${postsToSave.length}`);
         }
       }
 
-      // Save comments directly using Supabase client
+      // ============================================================
+// SAVE REDDIT COMMENTS — handles duplicates correctly
+// ============================================================
       if (comments.length > 0) {
-        // Check for existing comments first
-        const commentIds = comments.map((comment: any) => comment.id || comment.name);
-        const { data: existingComments } = await supabase
+        const commentsToSave = comments.map((comment: any) => ({
+          comment_id: comment.id || comment.name,
+          case_id: currentCase.id,
+          body: comment.body ?? '',
+          author: comment.author ?? '[deleted]',
+          subreddit: comment.subreddit ?? '',
+          link_title: comment.link_title ?? '',
+          permalink: comment.permalink ?? '',
+          score: comment.score ?? 0,
+          parent_id: comment.parent_id ?? '',
+          post_id: (comment.link_id ?? '').replace('t3_', '') || comment.post_id || '',
+          created_at: comment.created_utc
+            ? new Date(comment.created_utc * 1000).toISOString()
+            : new Date().toISOString(),
+          is_submitter: comment.is_submitter || false,
+          stored_by_function: 'frontend',
+          investigator_username: source || 'unknown',
+        }));
+
+        const { error: commentsError } = await supabase
           .from('reddit_comments')
-          .select('id')
-          .in('comment_id', `(${commentIds.join(',')})`);
+          .upsert(commentsToSave, {
+            onConflict: 'comment_id,case_id',
+            ignoreDuplicates: true,
+          });
 
-        const newComments = comments.filter((comment: any) => {
-          const commentId = comment.id || comment.name;
-          return !existingComments?.some(existing => existing.comment_id === commentId);
-        });
-
-        if (newComments.length === 0) {
-          console.log('[InvestigationContext] All comments already exist, skipping insert');
-          commentsInserted = 0;
+        if (commentsError) {
+          console.error('❌ Comments upsert error:', commentsError.message, commentsError.details);
         } else {
-          const commentsToInsert = newComments.map((comment: any) => ({
-            comment_id: comment.id || comment.name,
-            case_id: currentCase.id,
-            author: comment.author,
-            body: comment.body,
-            subreddit: comment.subreddit,
-            link_title: comment.link_title,
-            permalink: comment.permalink,
-            created_utc: comment.created_utc ? new Date(comment.created_utc * 1000).toISOString() : null,
-            score: comment.score,
-            parent_id: comment.parent_id,
-            is_submitter: comment.is_submitter || false,
-            stored_by_function: 'frontend',
-            investigator_username: source || 'unknown',
-          }));
-
-          const { data: insertedComments, error: commentsError } = await supabase
-            .from('reddit_comments')
-            .insert(commentsToInsert)
-            .select('id');
-
-          if (commentsError) {
-            console.error('[InvestigationContext] Insert comments error:', commentsError);
-          } else {
-            commentsInserted = insertedComments?.length || 0;
-          }
+          commentsInserted = commentsToSave.length;
+          console.log(`✅ Comments saved/skipped: ${commentsToSave.length}`);
         }
       }
 
