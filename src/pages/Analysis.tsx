@@ -1398,6 +1398,34 @@ const Analysis = () => {
                                           </div>
                                         )}
                                         
+                                        {/* Deep Analysis Button */}
+                                        <div className="mt-3">
+                                          <Button
+                                            onClick={() => fetchDeepAnalysis(index, `${post.title} ${post.selftext || ''}`)}
+                                            disabled={loadingDeepAnalysis[index]}
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full"
+                                          >
+                                            {loadingDeepAnalysis[index] ? (
+                                              <>
+                                                <Brain className="mr-2 h-4 w-4 animate-spin" />
+                                                Analyzing...
+                                              </>
+                                            ) : deepAnalysisData[index] ? (
+                                              <>
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                View Analysis
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Brain className="mr-2 h-4 w-4" />
+                                                xAI Deep Analysis
+                                              </>
+                                            )}
+                                          </Button>
+                                        </div>
+                                        
                                         {/* xAI Deep Analysis Section */}
                                           <div className="mt-3">
                                             <div className="border border-blue-200 rounded-lg overflow-hidden bg-white">
