@@ -49,7 +49,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
   const handleDeepAnalysis = async () => {
     setIsDeepAnalyzing(true);
     try {
-      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/gradio_api/deep_analyze`, {
+      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/run/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
