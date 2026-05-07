@@ -574,6 +574,84 @@ const UserProfiling = () => {
     return () => window.removeEventListener('case-data-updated', handler);
   }, [currentCase?.id, fetchSavedProfiles]);
 
+  // Fetch Reddit content from database for current case
+  useEffect(() => {
+    const fetchRedditContent = async () => {
+      if (!currentCase?.id || profileData?.username) return;
+
+      try {
+        // Fetch posts from database
+        const { data: postsData, error: postsError } = await supabase
+          .from('reddit_posts')
+          .select('*')
+          .eq('case_id', currentCase.id)
+          .order('created_utc', { ascending: false });
+
+        // Fetch comments from database
+        const { data: commentsData, error: commentsError } = await supabase
+          .from('reddit_comments')
+          .select('*')
+          .eq('case_id', currentCase.id)
+          .order('created_utc', { ascending: false });
+
+        if (postsError || commentsError) {
+          console.error('Error fetching Reddit content:', postsError, commentsError);
+          return;
+        }
+
+        // Convert database posts to postSentiments format
+        const postSentiments = postsData?.map(post => ({
+          text: post.title + ' ' + (post.selftext || ''),
+          sentiment: 'neutral', // Default sentiment if not analyzed
+          score: post.score,
+          created_utc: post.created_utc ? new Date(post.created_utc).getTime() / 1000 : 0,
+          title: post.title,
+          author: post.author,
+          subreddit: post.subreddit,
+          permalink: post.permalink,
+          url: post.url,
+        })) || [];
+
+        // Convert database comments to commentSentiments format
+        const commentSentiments = commentsData?.map(comment => ({
+          text: comment.body || '',
+          sentiment: 'neutral', // Default sentiment if not analyzed
+          score: comment.score,
+          created_utc: comment.created_utc ? new Date(comment.created_utc).getTime() / 1000 : 0,
+          author: comment.author,
+          subreddit: comment.subreddit,
+          permalink: comment.permalink,
+        })) || [];
+
+        // Update profileData with database content
+        if (postSentiments.length > 0 || commentSentiments.length > 0) {
+          setProfileData(prev => ({
+            ...prev,
+            postSentiments: [...(prev?.postSentiments || []), ...postSentiments],
+            commentSentiments: [...(prev?.commentSentiments || []), ...commentSentiments],
+          }));
+          console.log(`Loaded ${postSentiments.length} posts and ${commentSentiments.length} comments from database`);
+        }
+      } catch (error) {
+        console.error('Error fetching Reddit content from database:', error);
+      }
+    };
+
+    fetchRedditContent();
+
+    // Listen for Reddit content updates
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.caseId === currentCase?.id && detail?.kind === 'redditContent') {
+        console.log('Reddit content updated, refreshing...');
+        fetchRedditContent();
+      }
+    };
+
+    window.addEventListener('case-data-updated', handler);
+    return () => window.removeEventListener('case-data-updated', handler);
+  }, [currentCase?.id, profileData]);
+
   const loadSavedProfile = async (profileId: string) => {
     setIsLoading(true);
     setError(null);
