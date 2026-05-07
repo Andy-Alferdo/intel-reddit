@@ -574,24 +574,26 @@ const UserProfiling = () => {
     return () => window.removeEventListener('case-data-updated', handler);
   }, [currentCase?.id, fetchSavedProfiles]);
 
-  // Fetch Reddit content from database for current case
+  // Fetch Reddit content from database for current case and specific username
   useEffect(() => {
     const fetchRedditContent = async () => {
-      if (!currentCase?.id) return;
+      if (!currentCase?.id || !profileData?.username) return;
 
       try {
-        // Fetch posts from database
+        // Fetch posts from database for this username
         const { data: postsData, error: postsError } = await supabase
           .from('reddit_posts')
           .select('*')
           .eq('case_id', currentCase.id)
+          .eq('author', profileData.username)
           .order('created_utc', { ascending: false });
 
-        // Fetch comments from database
+        // Fetch comments from database for this username
         const { data: commentsData, error: commentsError } = await supabase
           .from('reddit_comments')
           .select('*')
           .eq('case_id', currentCase.id)
+          .eq('author', profileData.username)
           .order('created_utc', { ascending: false });
 
         if (postsError || commentsError) {
