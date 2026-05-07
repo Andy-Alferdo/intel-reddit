@@ -610,6 +610,11 @@ const UserProfiling = () => {
           subreddit: post.subreddit,
           permalink: post.permalink,
           url: post.url,
+          // Add missing properties that the UI expects
+          mostActiveHour: 12, // Default value
+          dayOfWeek: new Date(post.created_utc).getDay(),
+          month: new Date(post.created_utc).getMonth(),
+          year: new Date(post.created_utc).getFullYear(),
         })) || [];
 
         // Convert database comments to commentSentiments format
