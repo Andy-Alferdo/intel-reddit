@@ -604,7 +604,8 @@ const UserProfiling = () => {
         // Convert database posts to postSentiments format
         const postSentiments = postsData?.map(post => ({
           text: post.title + ' ' + (post.selftext || ''),
-          sentiment: 'neutral', // Default sentiment if not analyzed
+          sentiment: post.sentiment || 'neutral', // Use sentiment from database
+          confidence: post.sentiment ? 0.8 : undefined, // Default confidence if sentiment exists
           score: post.score,
           created_utc: post.created_utc ? new Date(post.created_utc).getTime() / 1000 : 0,
           title: post.title,
@@ -612,6 +613,7 @@ const UserProfiling = () => {
           subreddit: post.subreddit,
           permalink: post.permalink,
           url: post.url,
+          explanation: post.sentiment_explanation || undefined,
           // Add missing properties that the UI expects
           mostActiveHour: 12, // Default value
           dayOfWeek: new Date(post.created_utc).getDay(),
@@ -622,12 +624,14 @@ const UserProfiling = () => {
         // Convert database comments to commentSentiments format
         const commentSentiments = commentsData?.map(comment => ({
           text: comment.body || '',
-          sentiment: 'neutral', // Default sentiment if not analyzed
+          sentiment: comment.sentiment || 'neutral', // Use sentiment from database
+          confidence: comment.sentiment ? 0.8 : undefined, // Default confidence if sentiment exists
           score: comment.score,
           created_utc: comment.created_utc ? new Date(comment.created_utc).getTime() / 1000 : 0,
           author: comment.author,
           subreddit: comment.subreddit,
           permalink: comment.permalink,
+          explanation: comment.sentiment_explanation || undefined,
         })) || [];
 
         // Update profileData with database content
@@ -1243,7 +1247,9 @@ const UserProfiling = () => {
             const result = await saveRedditContentToDb(
               redditData.posts || [], 
               redditData.comments || [], 
-              'user_profile'
+              'user_profile',
+              analysisData?.postSentiments || [],
+              analysisData?.commentSentiments || []
             );
             console.log(`User Profiling: Saved ${result.totalInserted} Reddit items to database`);
           } catch (error: any) {

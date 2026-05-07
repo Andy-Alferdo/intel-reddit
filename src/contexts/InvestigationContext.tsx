@@ -206,15 +206,15 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   // Shared function to save Reddit content to database
-  const saveRedditContentToDb = useCallback(async (posts: any[], comments: any[], source: string) => {
+  const saveRedditContentToDb = useCallback(async (posts: any[], comments: any[], source: string, postSentiments?: any[], commentSentiments?: any[]) => {
     if (!currentCase?.id) {
       console.log('No current case, skipping Reddit content save');
-      return;
+      return { totalInserted: 0 };
     }
 
     if (!posts.length && !comments.length) {
       console.log('No Reddit content to save');
-      return;
+      return { totalInserted: 0 };
     }
 
     try {
@@ -227,25 +227,40 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 // SAVE REDDIT POSTS — handles duplicates correctly
 // ============================================================
       if (posts.length > 0) {
-        const postsToSave = posts.map((post: any) => ({
-          post_id: post.id || post.name,
-          case_id: currentCase.id,
-          title: post.title ?? '',
-          selftext: post.selftext ?? '',
-          author: post.author ?? '[deleted]',
-          subreddit: post.subreddit ?? '',
-          score: post.score ?? 0,
-          num_comments: post.num_comments ?? 0,
-          url: post.url ?? '',
-          permalink: post.permalink ?? '',
-          created_utc: post.created_utc
-            ? new Date(post.created_utc * 1000).toISOString()
-            : new Date().toISOString(),
-          over_18: post.over_18 || false,
-          is_original_content: post.is_original_content || false,
-          stored_by_function: 'frontend',
-          investigator_username: source || 'unknown',
-        }));
+        // Create a map of post_id to sentiment
+        const sentimentMap = new Map();
+        postSentiments?.forEach((sentiment: any, index: number) => {
+          const postId = posts[index]?.id || posts[index]?.name;
+          if (postId) {
+            sentimentMap.set(postId, sentiment);
+          }
+        });
+
+        const postsToSave = posts.map((post: any) => {
+          const postId = post.id || post.name;
+          const sentiment = sentimentMap.get(postId);
+          return {
+            post_id: postId,
+            case_id: currentCase.id,
+            title: post.title ?? '',
+            selftext: post.selftext ?? '',
+            author: post.author ?? '[deleted]',
+            subreddit: post.subreddit ?? '',
+            score: post.score ?? 0,
+            num_comments: post.num_comments ?? 0,
+            url: post.url ?? '',
+            permalink: post.permalink ?? '',
+            created_utc: post.created_utc
+              ? new Date(post.created_utc * 1000).toISOString()
+              : new Date().toISOString(),
+            over_18: post.over_18 || false,
+            is_original_content: post.is_original_content || false,
+            stored_by_function: 'frontend',
+            investigator_username: source || 'unknown',
+            sentiment: sentiment?.sentiment || null,
+            sentiment_explanation: sentiment?.explanation || null,
+          };
+        });
 
         const { error: postsError } = await supabase
           .from('reddit_posts')
@@ -266,23 +281,38 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 // SAVE REDDIT COMMENTS — handles duplicates correctly
 // ============================================================
       if (comments.length > 0) {
-        const commentsToSave = comments.map((comment: any) => ({
-          comment_id: comment.id || comment.name,
-          case_id: currentCase.id,
-          body: comment.body ?? '',
-          author: comment.author ?? '[deleted]',
-          subreddit: comment.subreddit ?? '',
-          link_title: comment.link_title ?? '',
-          permalink: comment.permalink ?? '',
-          score: comment.score ?? 0,
-          parent_id: comment.parent_id ?? '',
-                    created_utc: comment.created_utc
-            ? new Date(comment.created_utc * 1000).toISOString()
-            : new Date().toISOString(),
-          is_submitter: comment.is_submitter || false,
-          stored_by_function: 'frontend',
-          investigator_username: source || 'unknown',
-        }));
+        // Create a map of comment_id to sentiment
+        const sentimentMap = new Map();
+        commentSentiments?.forEach((sentiment: any, index: number) => {
+          const commentId = comments[index]?.id || comments[index]?.name;
+          if (commentId) {
+            sentimentMap.set(commentId, sentiment);
+          }
+        });
+
+        const commentsToSave = comments.map((comment: any) => {
+          const commentId = comment.id || comment.name;
+          const sentiment = sentimentMap.get(commentId);
+          return {
+            comment_id: commentId,
+            case_id: currentCase.id,
+            body: comment.body ?? '',
+            author: comment.author ?? '[deleted]',
+            subreddit: comment.subreddit ?? '',
+            link_title: comment.link_title ?? '',
+            permalink: comment.permalink ?? '',
+            score: comment.score ?? 0,
+            parent_id: comment.parent_id ?? '',
+            created_utc: comment.created_utc
+              ? new Date(comment.created_utc * 1000).toISOString()
+              : new Date().toISOString(),
+            is_submitter: comment.is_submitter || false,
+            stored_by_function: 'frontend',
+            investigator_username: source || 'unknown',
+            sentiment: sentiment?.sentiment || null,
+            sentiment_explanation: sentiment?.explanation || null,
+          };
+        });
 
         const { error: commentsError } = await supabase
           .from('reddit_comments')
