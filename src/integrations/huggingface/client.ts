@@ -76,8 +76,10 @@ export async function analyzeWithHuggingFace(
       JSON.stringify(comments)
     ]);
 
-    const hfResult = result.data;
-    console.log('[HF Client] Raw result from model:', hfResult);
+    // Model returns array with one object, unwrap it
+    const hfResult = Array.isArray(result.data) ? result.data[0] : result.data;
+    console.log('[HF Client] Raw result from model:', result.data);
+    console.log('[HF Client] Unwrapped result:', hfResult);
     console.log('[HF Client] Post sentiments raw:', hfResult?.post_sentiments?.slice(0, 3));
     console.log('[HF Client] Comment sentiments raw:', hfResult?.comment_sentiments?.slice(0, 3));
 
