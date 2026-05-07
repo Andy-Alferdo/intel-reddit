@@ -306,10 +306,11 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   }
 
   // Transform data for Treemap and sort by count (largest first)
+  // Note: item.name already has "r/" prefix from topSubreddits calculation
   const treemapData = data
     .sort((a, b) => b.count - a.count)
     .map((item, index) => ({
-      name: `r/${item.name}`,
+      name: item.name,
       size: item.count,
       fill: TREEMAP_COLORS[index % TREEMAP_COLORS.length]
     }));
@@ -1050,9 +1051,12 @@ const UserProfiling = () => {
           redditData.posts || [],
           redditData.comments || []
         );
-        console.log('Hugging Face analysis completed');
+        console.log('[UserProfiling] Hugging Face analysis completed');
+        console.log('[UserProfiling] Post sentiments sample:', analysisData?.postSentiments?.slice(0, 3));
+        console.log('[UserProfiling] Comment sentiments sample:', analysisData?.commentSentiments?.slice(0, 3));
+        console.log('[UserProfiling] Sentiment breakdown:', analysisData?.sentimentBreakdown);
       } catch (analysisError) {
-        console.error('Analysis error:', analysisError);
+        console.error('[UserProfiling] Analysis error:', analysisError);
         // Continue even if analysis fails
       }
       setTargetProgress(90);

@@ -77,6 +77,9 @@ export async function analyzeWithHuggingFace(
     ]);
 
     const hfResult = result.data;
+    console.log('[HF Client] Raw result from model:', hfResult);
+    console.log('[HF Client] Post sentiments raw:', hfResult?.post_sentiments?.slice(0, 3));
+    console.log('[HF Client] Comment sentiments raw:', hfResult?.comment_sentiments?.slice(0, 3));
 
     // Transform snake_case to camelCase and add explanation field
     const transformSentiment = (item: any): SentimentItem => ({
