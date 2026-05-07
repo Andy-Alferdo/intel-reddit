@@ -1820,11 +1820,11 @@ const UserProfiling = () => {
                 </CardHeader>
                 <CardContent className="p-4 space-y-2.5 text-xs">
                   {[
-                    { label: 'Most Active Hour', value: profileData.activityPattern.mostActiveHour, icon: Clock },
-                    { label: 'Most Active Day', value: profileData.activityPattern.mostActiveDay, icon: Calendar },
+                    { label: 'Most Active Hour', value: profileData?.activityPattern?.mostActiveHour || 'N/A', icon: Clock },
+                    { label: 'Most Active Day', value: profileData?.activityPattern?.mostActiveDay || 'N/A', icon: Calendar },
                     { label: 'Posting Frequency', value: `${(((profileData.postsCount || 0) + (profileData.commentsCount || 0)) / Math.max(1, (profileData.monthlyActivity?.length || 1))).toFixed(1)} / month`, icon: TrendingUp },
                     { label: 'Avg Engagement', value: `${Math.round((profileData.totalKarma || 0) / Math.max(1, (profileData.postsCount || 0) + (profileData.commentsCount || 0)))} karma/item`, icon: ThumbsUp },
-                    { label: 'Estimated Timezone', value: profileData.activityPattern.timezone, icon: Globe },
+                    { label: 'Estimated Timezone', value: profileData?.activityPattern?.timezone || 'N/A', icon: Globe },
                   ].map((row, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 last:border-0">
                       <div className="flex items-center gap-1.5 text-slate-500">
