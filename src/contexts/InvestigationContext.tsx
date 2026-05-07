@@ -227,18 +227,23 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 // SAVE REDDIT POSTS — handles duplicates correctly
 // ============================================================
       if (posts.length > 0) {
-        // Create a map of post_id to sentiment
+        // Log sentiment data for debugging
+        console.log(`[saveRedditContentToDb] Posts: ${posts.length}, PostSentiments: ${postSentiments?.length || 0}`);
+
+        // Create a map of post_id to sentiment (aligned by index)
         const sentimentMap = new Map();
         postSentiments?.forEach((sentiment: any, index: number) => {
           const postId = posts[index]?.id || posts[index]?.name;
-          if (postId) {
+          if (postId && sentiment?.sentiment) {
             sentimentMap.set(postId, sentiment);
+            console.log(`[saveRedditContentToDb] Mapped post ${postId} to sentiment: ${sentiment.sentiment}`);
           }
         });
 
         const postsToSave = posts.map((post: any) => {
           const postId = post.id || post.name;
           const sentiment = sentimentMap.get(postId);
+          const hasSentiment = sentiment?.sentiment ? true : false;
           return {
             post_id: postId,
             case_id: currentCase.id,
@@ -258,9 +263,11 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
             stored_by_function: 'frontend',
             investigator_username: source || 'unknown',
             sentiment: sentiment?.sentiment || null,
-            sentiment_explanation: sentiment?.explanation || null,
+            sentiment_explanation: typeof sentiment?.explanation === 'string' ? sentiment.explanation : JSON.stringify(sentiment?.explanation) || null,
           };
         });
+
+        console.log(`[saveRedditContentToDb] Posts with sentiment: ${postsToSave.filter((p: any) => p.sentiment).length}/${postsToSave.length}`);
 
         const { error: postsError } = await supabase
           .from('reddit_posts')
@@ -281,11 +288,14 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
 // SAVE REDDIT COMMENTS — handles duplicates correctly
 // ============================================================
       if (comments.length > 0) {
-        // Create a map of comment_id to sentiment
+        // Log sentiment data for debugging
+        console.log(`[saveRedditContentToDb] Comments: ${comments.length}, CommentSentiments: ${commentSentiments?.length || 0}`);
+
+        // Create a map of comment_id to sentiment (aligned by index)
         const sentimentMap = new Map();
         commentSentiments?.forEach((sentiment: any, index: number) => {
           const commentId = comments[index]?.id || comments[index]?.name;
-          if (commentId) {
+          if (commentId && sentiment?.sentiment) {
             sentimentMap.set(commentId, sentiment);
           }
         });
@@ -310,9 +320,11 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
             stored_by_function: 'frontend',
             investigator_username: source || 'unknown',
             sentiment: sentiment?.sentiment || null,
-            sentiment_explanation: sentiment?.explanation || null,
+            sentiment_explanation: typeof sentiment?.explanation === 'string' ? sentiment.explanation : JSON.stringify(sentiment?.explanation) || null,
           };
         });
+
+        console.log(`[saveRedditContentToDb] Comments with sentiment: ${commentsToSave.filter((c: any) => c.sentiment).length}/${commentsToSave.length}`);
 
         const { error: commentsError } = await supabase
           .from('reddit_comments')

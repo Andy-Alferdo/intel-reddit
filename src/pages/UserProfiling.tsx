@@ -941,11 +941,31 @@ const UserProfiling = () => {
     { name: 'Sun', value: 28 },
   ];
 
-  const sentimentChartData = [
-    { name: 'Positive', value: 45 },
-    { name: 'Neutral', value: 35 },
-    { name: 'Negative', value: 20 },
-  ];
+  // Calculate actual sentiment distribution from profile data
+  const sentimentChartData = useMemo(() => {
+    const allSentiments = [
+      ...(profileData?.postSentiments || []),
+      ...(profileData?.commentSentiments || [])
+    ];
+    
+    if (allSentiments.length === 0) {
+      return [
+        { name: 'Positive', value: 0 },
+        { name: 'Neutral', value: 0 },
+        { name: 'Negative', value: 0 },
+      ];
+    }
+    
+    const positive = allSentiments.filter(s => s.sentiment === 'positive').length;
+    const neutral = allSentiments.filter(s => s.sentiment === 'neutral').length;
+    const negative = allSentiments.filter(s => s.sentiment === 'negative').length;
+    
+    return [
+      { name: 'Positive', value: Math.round((positive / allSentiments.length) * 100) },
+      { name: 'Neutral', value: Math.round((neutral / allSentiments.length) * 100) },
+      { name: 'Negative', value: Math.round((negative / allSentiments.length) * 100) },
+    ];
+  }, [profileData?.postSentiments, profileData?.commentSentiments]);
 
   const subredditActivityData = [
     { name: 'r/technology', value: 156 },
@@ -1125,6 +1145,26 @@ const UserProfiling = () => {
       // Fix any URL encoding issues (Reddit sometimes returns escaped URLs)
       const cleanAvatarUrl = avatarUrl ? avatarUrl.replace(/&amp;/g, '&') : null;
 
+      // Calculate top subreddits from actual posts data
+      const subredditCounts: Record<string, number> = {};
+      (redditData.posts || []).forEach((post: any) => {
+        const sub = post.subreddit;
+        if (sub) {
+          subredditCounts[sub] = (subredditCounts[sub] || 0) + 1;
+        }
+      });
+      (redditData.comments || []).forEach((comment: any) => {
+        const sub = comment.subreddit;
+        if (sub) {
+          subredditCounts[sub] = (subredditCounts[sub] || 0) + 1;
+        }
+      });
+      
+      const topSubreddits = Object.entries(subredditCounts)
+        .sort(([,a], [,b]) => (b as number) - (a as number))
+        .slice(0, 10)
+        .map(([name, value]) => ({ name: `r/${name}`, value }));
+
       const profileResult = {
         username: cleanUsername,
         avatar: cleanAvatarUrl,
@@ -1134,7 +1174,7 @@ const UserProfiling = () => {
         totalKarma: redditData.user.link_karma + redditData.user.comment_karma,
         postKarma: redditData.user.link_karma,
         commentKarma: redditData.user.comment_karma,
-        activeSubreddits: analysisData?.topSubreddits || [],
+        activeSubreddits: topSubreddits,
         activityPattern: {
           mostActiveHour: mostActiveHour ? `${mostActiveHour[0]}:00-${parseInt(mostActiveHour[0])+1}:00 PKT` : 'N/A',
           mostActiveDay: mostActiveDay?.[0] || 'N/A',
