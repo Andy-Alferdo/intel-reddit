@@ -663,7 +663,7 @@ const UserProfiling = () => {
 
     window.addEventListener('case-data-updated', handler);
     return () => window.removeEventListener('case-data-updated', handler);
-  }, [currentCase?.id, profileData]);
+  }, [currentCase?.id, profileData?.username]);
 
   const loadSavedProfile = async (profileId: string) => {
     setIsLoading(true);
