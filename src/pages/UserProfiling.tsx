@@ -447,7 +447,7 @@ const UserProfiling = () => {
     })));
 
     try {
-      const response = await fetch('http://localhost:5000/deep-analysis', {
+      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/deep-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -635,12 +635,12 @@ const UserProfiling = () => {
           explanation: comment.sentiment_explanation || undefined,
         })) || [];
 
-        // Update profileData with database content
+        // Update profileData with database content (replace, don't append)
         if (postSentiments.length > 0 || commentSentiments.length > 0) {
           setProfileData(prev => ({
             ...prev,
-            postSentiments: [...(prev?.postSentiments || []), ...postSentiments],
-            commentSentiments: [...(prev?.commentSentiments || []), ...commentSentiments],
+            postSentiments: postSentiments, // Replace entirely
+            commentSentiments: commentSentiments, // Replace entirely
             // Add default activityPattern if not present
             activityPattern: prev?.activityPattern || { mostActiveHour: 'N/A', mostActiveDay: 'N/A', timezone: 'PKT' },
           }));

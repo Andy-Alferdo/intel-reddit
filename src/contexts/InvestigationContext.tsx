@@ -543,12 +543,17 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
     }
     try {
       console.log('[InvestigationContext] Saving monitoring session:', session.targetName, 'to case:', currentCase.id);
+      
+      // Get current user ID for created_by field
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || session.profileData?.userId || null;
+      
       const { error } = await supabase
         .from('monitoring_sessions')
         .upsert({
           case_id: currentCase.id,
           target_name: session.targetName,
-          created_by: session.profileData?.userId || null,
+          created_by: userId,
           search_type: session.searchType,
           activities: session.activities,
           profile_data: session.profileData,

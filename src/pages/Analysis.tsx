@@ -109,7 +109,7 @@ const Analysis = () => {
     
     setLoadingDeepAnalysis(prev => ({ ...prev, [postIndex]: true }));
     try {
-      const response = await fetch('http://localhost:5000/deep-analysis', {
+      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/deep-analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),

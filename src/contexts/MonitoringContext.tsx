@@ -690,10 +690,8 @@ export const MonitoringProvider = ({ children }: { children: ReactNode }) => {
 
         setTargets(newTargets);
         
-        // Auto-select the first target to show detail view instead of card grid
-        if (newTargets.length > 0) {
-          setSelectedTargetId(newTargets[0].id);
-        }
+        // Don't auto-select targets on page load - let user choose
+        // This prevents showing previous profile on refresh
       } catch (err) {
         console.error('Failed to auto-load monitoring sessions:', err);
         loadedCaseRef.current = null; // Allow retry on error
