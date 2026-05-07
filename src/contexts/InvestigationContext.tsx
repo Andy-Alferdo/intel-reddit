@@ -277,7 +277,7 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
           score: comment.score ?? 0,
           parent_id: comment.parent_id ?? '',
           post_id: (comment.link_id ?? '').replace('t3_', '') || comment.post_id || '',
-          created_at: comment.created_utc
+          created_utc: comment.created_utc
             ? new Date(comment.created_utc * 1000).toISOString()
             : new Date().toISOString(),
           is_submitter: comment.is_submitter || false,
