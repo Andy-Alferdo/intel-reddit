@@ -344,15 +344,8 @@ const LinkAnalysis = () => {
     setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { isAnalyzing: true, result: null, showDeep: false })));
 
     try {
-      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/run/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) throw new Error(`Deep analysis failed: ${response.statusText}`);
-
-      const result = await response.json();
+      const { analyzeDeep } = await import('@/integrations/huggingface/client');
+      const result = await analyzeDeep(text);
       
       setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
         isAnalyzing: false, 

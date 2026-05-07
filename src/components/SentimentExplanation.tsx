@@ -49,17 +49,9 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
   const handleDeepAnalysis = async () => {
     setIsDeepAnalyzing(true);
     try {
-      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/run/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Deep analysis failed: ${response.statusText}`);
-      }
-
-      const result: DeepAnalysisResponse = await response.json();
+      const { analyzeDeep } = await import('@/integrations/huggingface/client');
+      const result = await analyzeDeep(text);
+      
       setDeepAnalysis(result);
       setShowDeepAnalysis(true);
       toast({

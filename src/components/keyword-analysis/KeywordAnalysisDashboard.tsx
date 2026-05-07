@@ -463,7 +463,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
   const { toast } = useToast();
   const { addKeywordAnalysis, saveKeywordAnalysisToDb, saveRedditContentToDb, currentCase } = useInvestigation();
 
-  // Request deep analysis for a post - matching User Profiling
+  // Request deep analysis for a post - using Gradio client
   const handleDeepAnalysis = useCallback(async (text: string, postId: string) => {
     // Set analyzing state
     setDeepAnalysisStates(prev => new Map(prev.set(postId, { 
@@ -473,17 +473,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
     })));
 
     try {
-      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/run/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Deep analysis failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const { analyzeDeep } = await import('@/integrations/huggingface/client');
+      const result = await analyzeDeep(text);
       
       // Update state with result
       setDeepAnalysisStates(prev => new Map(prev.set(postId, { 

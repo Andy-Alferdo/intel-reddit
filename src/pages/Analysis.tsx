@@ -103,28 +103,19 @@ const Analysis = () => {
     } catch { /* ignore */ }
   }, [currentCase?.id]);
 
-  // Fetch deep analysis for a post - directly from Python server (like UserProfiling)
+  // Fetch deep analysis for a post - using Gradio client
   const fetchDeepAnalysis = useCallback(async (postIndex: number, text: string) => {
     if (loadingDeepAnalysis[postIndex] || deepAnalysisData[postIndex]) return;
     
     setLoadingDeepAnalysis(prev => ({ ...prev, [postIndex]: true }));
     try {
-      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/run/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Deep analysis failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const { analyzeDeep } = await import('@/integrations/huggingface/client');
+      const result = await analyzeDeep(text);
       
-      if (result?.deep_explanation) {
+      if (result?.explanation) {
         setDeepAnalysisData(prev => ({ 
           ...prev, 
-          [postIndex]: result.deep_explanation 
+          [postIndex]: result.explanation 
         }));
       }
     } catch (err) {

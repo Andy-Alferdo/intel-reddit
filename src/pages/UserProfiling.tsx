@@ -447,30 +447,15 @@ const UserProfiling = () => {
     })));
 
     try {
-      const response = await fetch(`${import.meta.env?.VITE_HF_SPACE_URL || "https://takeda-shingen-intel-reddit-analyzer.hf.space"}/run/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Deep analysis failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const { analyzeDeep } = await import('@/integrations/huggingface/client');
+      const result = await analyzeDeep(text);
       
-      // Update state with result
       setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
         isAnalyzing: false, 
         result, 
         showDeep: true,
         analysisType: 'lime'
       })));
-
-      toast({
-        title: "Deep Analysis Complete",
-        description: "Advanced Deep Analysis analysis has been performed on this text.",
-      });
     } catch (error) {
       console.error('Deep analysis error:', error);
       
