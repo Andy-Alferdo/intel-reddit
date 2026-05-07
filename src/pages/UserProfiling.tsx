@@ -577,7 +577,7 @@ const UserProfiling = () => {
   // Fetch Reddit content from database for current case
   useEffect(() => {
     const fetchRedditContent = async () => {
-      if (!currentCase?.id || profileData?.username) return;
+      if (!currentCase?.id) return;
 
       try {
         // Fetch posts from database
@@ -634,6 +634,8 @@ const UserProfiling = () => {
             ...prev,
             postSentiments: [...(prev?.postSentiments || []), ...postSentiments],
             commentSentiments: [...(prev?.commentSentiments || []), ...commentSentiments],
+            // Add default activityPattern if not present
+            activityPattern: prev?.activityPattern || { mostActiveHour: 'N/A', mostActiveDay: 'N/A', timezone: 'PKT' },
           }));
           console.log(`Loaded ${postSentiments.length} posts and ${commentSentiments.length} comments from database`);
         }
