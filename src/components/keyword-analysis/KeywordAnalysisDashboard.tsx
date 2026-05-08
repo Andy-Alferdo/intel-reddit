@@ -1052,79 +1052,45 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                 </CardHeader>
                 <CardContent className="p-4">
                   {topSubredditsData.length > 0 ? (
-                    <div className="h-48">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                          data={topSubredditsData}
-                          layout="vertical"
-                          margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
-                        >
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                          <XAxis type="number" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-                          <YAxis
-                            dataKey="name"
-                            type="category"
-                            tick={{ fontSize: 10 }}
-                            width={70}
-                            stroke="#64748b"
-                          />
-                          <RTooltip
-                            contentStyle={{
-                              backgroundColor: 'white',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              fontSize: '11px'
-                            }}
-                          />
-                          <Bar
-                            dataKey="mentions"
-                            fill="#3b82f6"
-                            radius={[0, 4, 4, 0]}
-                            barSize={20}
-                          />
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <div className="space-y-1.5">
+                      {topSubredditsData.slice(0, 5).map((sub, index) => {
+                        const cleanSubreddit = sub.name.replace(/^r\//, '');
+                        return (
+                          <div key={index} className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                              <span className="text-slate-600">{sub.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-slate-900">{sub.mentions}</span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => navigate('/monitoring', { state: { prefillCommunity: cleanSubreddit } })}>
+                                    <Eye className="h-3 w-3 mr-2" />
+                                    Add to Monitoring
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => navigate('/analysis', { state: { prefillCommunity: cleanSubreddit, activeTab: 'community', viewOnly: true } })}>
+                                    <Users className="h-3 w-3 mr-2" />
+                                    Add to Community Analysis
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="h-32 flex items-center justify-center text-slate-400">
                       <span className="text-xs">No subreddit data available</span>
                     </div>
                   )}
-                  {/* Legend */}
-                  <div className="mt-3 space-y-1.5">
-                    {topSubredditsData.slice(0, 5).map((sub, index) => {
-                      const cleanSubreddit = sub.name.replace(/^r\//, '');
-                      return (
-                        <div key={index} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                            <span className="text-slate-600">{sub.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900">{sub.mentions}</span>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6">
-                                  <MoreVertical className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate('/monitoring', { state: { prefillCommunity: cleanSubreddit } })}>
-                                  <Eye className="h-3 w-3 mr-2" />
-                                  Add to Monitoring
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate('/analysis', { state: { prefillCommunity: cleanSubreddit, activeTab: 'community', viewOnly: true } })}>
-                                  <Users className="h-3 w-3 mr-2" />
-                                  Add to Community Analysis
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
+                                  </CardContent>
               </Card>
 
               {/* Sentiment Analysis Card */}
