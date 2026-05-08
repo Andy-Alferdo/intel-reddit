@@ -1152,7 +1152,7 @@ const UserProfiling = () => {
       const topSubreddits = Object.entries(subredditCounts)
         .sort(([,a], [,b]) => (b as number) - (a as number))
         .slice(0, 10)
-        .map(([name, value]) => ({ name: `r/${name}`, value }));
+        .map(([name, count]) => ({ name: `r/${name}`, count }));
 
       const profileResult = {
         username: cleanUsername,
@@ -1373,7 +1373,8 @@ const UserProfiling = () => {
           ? deepState.result.shap_explanation?.word_contributions
           : deepState.result.deep_explanation?.word_contributions) || [];
       }
-      return (item.word_contributions || []) || [];
+      // Try word_importance from metadata (from database), then from item, then word_contributions
+      return (item.metadata?.word_importance || item.word_importance || item.word_contributions || []) || [];
     };
 
     // Get correct sentiment label based on highest probability
@@ -1879,18 +1880,22 @@ const UserProfiling = () => {
                 <CardHeader className="pb-2.5 border-b border-slate-100">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-blue-600" /> Possible Location Indicators
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3 w-3 text-slate-400 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs text-xs">AI-detected location signals from posts, comments, and language patterns.</p>
-                      </TooltipContent>
-                    </Tooltip>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 space-y-1.5">
-                  {(profileData.locationIndicators || []).slice(0, 6).map((loc: string, i: number) => (
+                  {(profileData.locationIndicators || [])
+                    .filter((loc: string) => {
+                      // Filter out non-geographical terms
+                      const nonGeographicTerms = [
+                        'reddit', 'r/', 'www', 'com', 'http', 'https', 'www.reddit.com',
+                        'username', 'user', 'profile', 'account', 'online', 'digital',
+                        'social', 'media', 'platform', 'forum', 'community', 'subreddit'
+                      ];
+                      const lowerLoc = loc.toLowerCase();
+                      return !nonGeographicTerms.some(term => lowerLoc.includes(term)) && loc.length > 1;
+                    })
+                    .slice(0, 6)
+                    .map((loc: string, i: number) => (
                     <div key={i} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-slate-50 border border-slate-100">
                       <MapPin className="h-3 w-3 text-blue-500 flex-shrink-0" />
                       <span className="text-slate-700 truncate">{loc}</span>

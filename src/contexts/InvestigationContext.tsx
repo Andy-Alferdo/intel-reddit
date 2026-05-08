@@ -264,6 +264,11 @@ export const InvestigationProvider = ({ children }: { children: ReactNode }) => 
             investigator_username: source || 'unknown',
             sentiment: sentiment?.sentiment || null,
             sentiment_explanation: typeof sentiment?.explanation === 'string' ? sentiment.explanation : JSON.stringify(sentiment?.explanation) || null,
+            metadata: {
+              word_importance: sentiment?.word_importance || [],
+              all_probabilities: sentiment?.all_probabilities || {},
+              confidence: sentiment?.confidence || null
+            }
           };
         });
 
