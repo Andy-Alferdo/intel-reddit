@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,10 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   Search, X, ExternalLink, Clock, TrendingUp, Users, BarChart3,
   MessageSquare, Brain, Activity, Hash, ArrowLeft, Target, Filter,
-  Sparkles, Eye
+  Sparkles, Eye, MoreVertical, UserPlus
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip,
@@ -451,6 +453,7 @@ interface KeywordAnalysisDashboardProps {
 }
 
 const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => {
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState('');
   const [keywordData, setKeywordData] = useState<KeywordData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -1089,15 +1092,37 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                   )}
                   {/* Legend */}
                   <div className="mt-3 space-y-1.5">
-                    {topSubredditsData.slice(0, 5).map((sub, index) => (
-                      <div key={index} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                          <span className="text-slate-600">{sub.name}</span>
+                    {topSubredditsData.slice(0, 5).map((sub, index) => {
+                      const cleanSubreddit = sub.name.replace(/^r\//, '');
+                      return (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <span className="text-slate-600">{sub.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-slate-900">{sub.mentions}</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6">
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => navigate('/monitoring', { state: { prefillCommunity: cleanSubreddit } })}>
+                                  <Eye className="h-3 w-3 mr-2" />
+                                  Add to Monitoring
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate('/analysis', { state: { prefillCommunity: cleanSubreddit, activeTab: 'community', viewOnly: true } })}>
+                                  <Users className="h-3 w-3 mr-2" />
+                                  Add to Community Analysis
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
-                        <span className="font-medium text-slate-900">{sub.mentions}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
@@ -1265,30 +1290,50 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
               <CardContent className="p-4">
                 {topUsers.length > 0 ? (
                   <div className="space-y-3">
-                    {topUsers.map((user, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600">
-                            {index + 1}
+                    {topUsers.map((user, index) => {
+                      const cleanUsername = user.username.replace(/^u\//, '');
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600">
+                              {index + 1}
+                            </div>
+                            <span className="text-sm font-medium text-slate-900">{user.username}</span>
                           </div>
-                          <span className="text-sm font-medium text-slate-900">{user.username}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-blue-500 rounded-full"
-                              style={{ width: `${(user.count / topUsers[0].count) * 100}%` }}
-                            />
+                          <div className="flex items-center gap-2">
+                            <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full"
+                                style={{ width: `${(user.count / topUsers[0].count) * 100}%` }}
+                              />
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              {user.count}
+                            </Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => navigate('/monitoring', { state: { prefillUser: cleanUsername } })}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Add to Monitoring
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => navigate('/user-profiling', { state: { prefillUsername: cleanUsername } })}>
+                                  <UserPlus className="h-4 w-4 mr-2" />
+                                  Add to User Profiling
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {user.count}
-                          </Badge>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="h-32 flex items-center justify-center text-slate-400">
