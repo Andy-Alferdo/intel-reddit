@@ -282,6 +282,18 @@ const PostCard = ({
   // Get contributions from deep analysis result
   const getContributions = () => {
     if (deepAnalysisState?.showDeep && deepAnalysisState.result) {
+      const wordImportance = deepAnalysisState.result.word_importance;
+      if (wordImportance && Array.isArray(wordImportance)) {
+        // Map backend format to frontend expected format
+        return wordImportance.map(item => ({
+          word: item.word,
+          contribution: item.importance,  // Map importance to contribution
+          score: item.importance,
+          weight: item.importance,
+          value: item.importance,
+          sentiment_contribution: item.sentiment_contribution
+        }));
+      }
       return deepAnalysisState.result.deep_explanation?.word_contributions || 
              deepAnalysisState.result.shap_explanation?.word_contributions ||
              deepAnalysisState.result.word_contributions || [];
