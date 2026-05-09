@@ -409,11 +409,10 @@ const Analysis = () => {
       
       // Save Reddit content to database
       try {
-        await saveRedditContentToDb(matchingPosts, [], 'keyword_analysis');
+        await saveRedditContentToDb(matchingPosts, [], 'keyword_analysis', postSentiments, []);
         console.log(`Keyword Analysis: Saved ${matchingPosts.length} Reddit posts for keyword "${keyword}"`);
       } catch (error: any) {
         console.error('Keyword Analysis: Failed to save Reddit content:', error);
-        // Don't block the UI, just log the error
       }
       
       // Save to investigation context

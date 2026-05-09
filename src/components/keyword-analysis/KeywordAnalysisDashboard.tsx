@@ -826,7 +826,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
 
       // Save Reddit content to database
       try {
-        await saveRedditContentToDb(posts, [], 'keyword_analysis');
+        await saveRedditContentToDb(posts, [], 'keyword_analysis', postSentiments, []);
         console.log(`Keyword Analysis: Saved ${posts.length} Reddit posts for keyword "${keyword}"`);
       } catch (error: any) {
         console.error('Keyword Analysis: Failed to save Reddit content:', error);
