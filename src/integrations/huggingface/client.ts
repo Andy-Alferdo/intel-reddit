@@ -71,10 +71,10 @@ export async function analyzeWithHuggingFace(
 ): Promise<AnalysisResult> {
   try {
     const client = await getClient();
-    const result = await client.predict("/analyze_reddit_content", [
-      JSON.stringify(posts),
-      JSON.stringify(comments)
-    ]);
+    const result = await client.predict("/analyze_reddit_content", {
+      posts_json: JSON.stringify(posts),
+      comments_json: JSON.stringify(comments)
+    });
 
     // Model returns array with one object, unwrap it
     const hfResult = Array.isArray(result.data) ? result.data[0] : result.data;
@@ -123,7 +123,9 @@ export async function analyzeSingleText(text: string): Promise<{
   text_preview: string;
 }> {
   const client = await getClient();
-  const result = await client.predict("/analyze_sentiment", [text]);
+  const result = await client.predict("/analyze_sentiment", {
+    text: text
+  });
   return result.data;
 }
 
@@ -134,7 +136,9 @@ export async function analyzeSingleText(text: string): Promise<{
  */
 export async function analyzeDeep(text: string): Promise<DeepAnalysisResult> {
   const client = await getClient();
-  const result = await client.predict("/deep_analyze", [text]);
+  const result = await client.predict("/deep_analyze", {
+    text: text
+  });
   return result.data;
 }
 
@@ -153,11 +157,11 @@ export async function predict(
   deep_text?: string
 ): Promise<any> {
   const client = await getClient();
-  const result = await client.predict("/predict", [
-    posts_json,
-    comments_json,
-    deep_text || ""
-  ]);
+  const result = await client.predict("/predict", {
+    posts_json: posts_json,
+    comments_json: comments_json,
+    deep_text: deep_text || ""
+  });
   return result.data;
 }
 
