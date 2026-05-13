@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getModelServerUrl } from '../config/api';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,6 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
-import { analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 
 const INITIAL_VISIBLE = 10;
 
@@ -51,7 +51,7 @@ const formatTimestamp = (utc?: number): string => {
 const sentimentTone = (s?: string) => {
   if (s === 'positive') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   if (s === 'negative') return 'bg-rose-50 text-rose-700 border-rose-200';
-  return 'bg-slate-50 text-slate-700 border-slate-200';
+  return 'bg-muted text-muted-foreground border-border';
 };
 
 const SENT_COLORS = { positive: '#10b981', neutral: '#94a3b8', negative: '#ef4444' };
@@ -126,135 +126,102 @@ const PremiumExplanation = ({
       });
   };
 
-  // Get chip color based on mathematical contribution sign
-  const getChipColor = (token: any) => {
-    const score = token.contribution || token.score || token.weight || token.value || 0;
-    
-    // Threshold for weak evidence
-    if (Math.abs(score) < 0.005) {
-      return 'bg-gray-50 text-gray-600 border-gray-200';
-    }
-    
-    // Use mathematical sign: positive = supports, negative = opposes
-    if (score > 0) {
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    } else {
-      return 'bg-rose-50 text-rose-700 border-rose-200';
+  const getSentimentColor = (sent: string) => {
+    switch (sent?.toLowerCase()) {
+      case 'positive':
+        return 'bg-green-100 text-green-700 border-green-300';
+      case 'negative':
+        return 'bg-red-100 text-red-700 border-red-300';
+      default:
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
+  const getBarColor = (contribution: number) => {
+    if (contribution > 0) return 'bg-green-500';
+    if (contribution < 0) return 'bg-red-500';
+    return 'bg-muted-foreground';
+  };
+
+  const getPullDirection = (contribution: number) => {
+    if (contribution > 0) return 'pull positive';
+    if (contribution < 0) return 'pull negative';
+    return 'neutral';
+  };
+
+  const getPullColor = (contribution: number) => {
+    if (contribution > 0) return 'text-green-600';
+    if (contribution < 0) return 'text-red-600';
+    return 'text-muted-foreground';
+  };
+
   const filteredTokens = filterTokens(contributions);
-  const topTokens = filteredTokens.slice(0, isExpanded ? 8 : 3);
+  const topTokens = filteredTokens.slice(0, 5);
   const confidenceValue = confidence;
+  const maxContribution = topTokens.length > 0 
+    ? Math.max(...topTokens.map(t => Math.abs(t.contribution || t.score || t.weight || t.value || 0)))
+    : 1;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-blue-600" />
-            <span className="text-xs font-semibold text-gray-900">xAI Deep Analysis</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              sentiment === 'positive' ? 'bg-emerald-100 text-emerald-700' :
-              sentiment === 'negative' ? 'bg-rose-100 text-rose-700' :
-              'bg-gray-100 text-gray-700'
-            }`}>
-              {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
-            </span>
-            {confidenceValue !== null && (
-              <span className="text-xs text-gray-500">
-                {confidenceValue.toFixed(2)}
-              </span>
-            )}
-          </div>
-        </div>
+      <div className="px-3 py-2 border-b border-border">
+        <div className="text-xs font-semibold text-foreground">Sentiment analysis</div>
       </div>
 
       {/* Content */}
-      <div className="px-3 py-2">
-        {/* Short explanation */}
-        <p className="text-xs text-gray-700 mb-2 leading-relaxed">
-          {getShortExplanation(sentiment)}
-        </p>
+      <div className="px-3 py-3 space-y-3">
+        {/* Sentiment Badge and Confidence */}
+        <div className="flex items-center justify-between">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded border ${getSentimentColor(sentiment)}`}>
+            {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
+          </span>
+          {confidenceValue !== null && confidenceValue !== undefined && (
+            <span className="text-lg font-bold text-foreground">
+              {Math.round(confidenceValue * 100)}%
+            </span>
+          )}
+        </div>
 
-        {/* Top indicators */}
+        {/* WORD SIGNALS Section */}
         {topTokens.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {topTokens.map((token, i) => (
-              <span
-                key={i}
-                className={`text-[10px] px-1.5 py-0.5 rounded border ${getChipColor(token)}`}
-              >
-                {token.word}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Expanded evidence */}
-        {isExpanded && filteredTokens.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="text-xs font-semibold text-gray-900 mb-2">Word Contribution Evidence</div>
-            <div className="space-y-1">
-              {filteredTokens.length > 0 ? (
-                filteredTokens.slice(0, 8).map((token, i) => {
-                  // Get real score from various possible fields
-                  const score = token.contribution || token.score || token.weight || token.value || 0;
-                  
-                  // Use mathematical sign: positive = supports, negative = opposes
-                  const supportsPrediction = score > 0;
-                  const opposesPrediction = score < 0;
-                  const isWeak = Math.abs(score) < 0.005;
-                  
-                  // Calculate bar width based on relative contribution
-                  const maxScore = Math.max(...filteredTokens.map(t => Math.abs(t.contribution || t.score || t.weight || t.value || 0)));
-                  const barWidth = maxScore > 0 ? (Math.abs(score) / maxScore) * 100 : 0;
-                  
-                  return (
-                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <span className="font-mono bg-gray-50 px-1 py-0.5 rounded border border-gray-200 min-w-[3rem] text-center">
-                        {token.word}
-                      </span>
-                      <span className={`font-mono min-w-[2.5rem] text-right ${
-                        isWeak ? 'text-gray-500' : score > 0 ? 'text-emerald-600' : 'text-rose-600'
-                      }`}>
-                        {score > 0 ? '+' : ''}{score.toFixed(3)}
-                      </span>
-                      <span className={`text-xs ${
-                        isWeak ? 'text-gray-500' : supportsPrediction ? 'text-emerald-600' : 'text-rose-600'
-                      }`}>
-                        {isWeak ? 'Weak signal' : supportsPrediction ? 'Supports prediction' : 'Opposes prediction'}
-                      </span>
-                      {/* Mini bar */}
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-300 ${
-                            isWeak ? 'bg-gray-400' : supportsPrediction ? 'bg-emerald-500' : 'bg-rose-500'
-                          }`}
-                          style={{ width: `${Math.min(100, barWidth)}%` }}
-                        />
-                      </div>
+          <div>
+            <div className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wide">WORD SIGNALS</div>
+            <div className="space-y-2">
+              {topTokens.map((token, i) => {
+                const score = token.contribution || token.score || token.weight || token.value || 0;
+                const barWidth = maxContribution > 0 ? (Math.abs(score) / maxContribution) * 100 : 0;
+                
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground w-16 truncate">{token.word}</span>
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${getBarColor(score)}`}
+                        style={{ width: `${Math.min(100, barWidth)}%` }}
+                      />
                     </div>
-                  );
-                })
-              ) : (
-                <div className="text-xs text-gray-500 italic py-2">
-                  No detailed contribution data available
-                </div>
-              )}
+                    <span className={`text-[10px] ${getPullColor(score)}`}>
+                      {getPullDirection(score)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
+        {/* Informational Note */}
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          This analysis identifies key words that influence the sentiment prediction.
+        </p>
+
         {/* Buttons */}
-        <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-2 pt-2 border-t border-border">
           <Button
             size="sm"
             variant="outline"
-            className="h-6 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
+            className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
               onToggleExpand();
@@ -263,25 +230,25 @@ const PremiumExplanation = ({
           >
             {isAnalyzing ? (
               <>
-                <Zap className="h-3 w-3 mr-1 animate-pulse" />
+                <Zap className="h-2.5 w-2.5 mr-1 animate-pulse" />
                 Analyzing...
               </>
             ) : isExpanded ? (
               <>
-                <Eye className="h-3 w-3 mr-1" />
+                <Eye className="h-2.5 w-2.5 mr-1" />
                 Hide Details
               </>
             ) : (
               <>
-                <BarChart3 className="h-3 w-3 mr-1" />
-                Show Detailed Evidence
+                <BarChart3 className="h-2.5 w-2.5 mr-1" />
+                Show Details
               </>
             )}
           </Button>
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 px-2 text-[10px] text-gray-600 hover:bg-gray-50"
+            className="h-5 px-2 text-[10px] text-muted-foreground hover:bg-muted"
             onClick={(e) => {
               e.stopPropagation();
               onShowOriginal();
@@ -306,11 +273,10 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   }
 
   // Transform data for Treemap and sort by count (largest first)
-  // Note: item.name already has "r/" prefix from topSubreddits calculation
   const treemapData = data
     .sort((a, b) => b.count - a.count)
     .map((item, index) => ({
-      name: item.name,
+      name: `r/${item.name}`,
       size: item.count,
       fill: TREEMAP_COLORS[index % TREEMAP_COLORS.length]
     }));
@@ -400,9 +366,9 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
               if (active && payload && payload.length) {
                 const data = payload[0].payload;
                 return (
-                  <div className="bg-white px-3 py-2 rounded-lg shadow-lg border border-gray-200 text-sm">
-                    <div className="font-semibold text-gray-900">{data.name}</div>
-                    <div className="text-gray-600">{data.size} posts</div>
+                  <div className="bg-card px-3 py-2 rounded-lg shadow-lg border border-border text-sm">
+                    <div className="font-semibold text-foreground">{data.name}</div>
+                    <div className="text-muted-foreground">{data.size} posts</div>
                   </div>
                 );
               }
@@ -447,15 +413,30 @@ const UserProfiling = () => {
     })));
 
     try {
-      const { analyzeDeep } = await import('@/integrations/huggingface/client');
-      const result = await analyzeDeep(text);
+      const response = await fetch(getModelServerUrl('/deep-analysis'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Deep analysis failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
       
+      // Update state with result
       setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
         isAnalyzing: false, 
         result, 
         showDeep: true,
         analysisType: 'lime'
       })));
+
+      toast({
+        title: "Deep Analysis Complete",
+        description: "Advanced Deep Analysis analysis has been performed on this text.",
+      });
     } catch (error) {
       console.error('Deep analysis error:', error);
       
@@ -559,97 +540,6 @@ const UserProfiling = () => {
     window.addEventListener('case-data-updated', handler);
     return () => window.removeEventListener('case-data-updated', handler);
   }, [currentCase?.id, fetchSavedProfiles]);
-
-  // Fetch Reddit content from database for current case and specific username
-  useEffect(() => {
-    const fetchRedditContent = async () => {
-      if (!currentCase?.id || !profileData?.username) return;
-
-      try {
-        // Fetch posts from database for this username
-        const { data: postsData, error: postsError } = await supabase
-          .from('reddit_posts')
-          .select('*')
-          .eq('case_id', currentCase.id)
-          .eq('author', profileData.username)
-          .order('created_utc', { ascending: false });
-
-        // Fetch comments from database for this username
-        const { data: commentsData, error: commentsError } = await supabase
-          .from('reddit_comments')
-          .select('*')
-          .eq('case_id', currentCase.id)
-          .eq('author', profileData.username)
-          .order('created_utc', { ascending: false });
-
-        if (postsError || commentsError) {
-          console.error('Error fetching Reddit content:', postsError, commentsError);
-          return;
-        }
-
-        // Convert database posts to postSentiments format
-        const postSentiments = postsData?.map(post => ({
-          text: post.title + ' ' + (post.selftext || ''),
-          sentiment: post.sentiment || 'neutral', // Use sentiment from database
-          confidence: post.sentiment ? 0.8 : undefined, // Default confidence if sentiment exists
-          score: post.score,
-          created_utc: post.created_utc ? new Date(post.created_utc).getTime() / 1000 : 0,
-          title: post.title,
-          author: post.author,
-          subreddit: post.subreddit,
-          permalink: post.permalink,
-          url: post.url,
-          explanation: post.sentiment_explanation || undefined,
-          // Add missing properties that the UI expects
-          mostActiveHour: 12, // Default value
-          dayOfWeek: new Date(post.created_utc).getDay(),
-          month: new Date(post.created_utc).getMonth(),
-          year: new Date(post.created_utc).getFullYear(),
-        })) || [];
-
-        // Convert database comments to commentSentiments format
-        const commentSentiments = commentsData?.map(comment => ({
-          text: comment.body || '',
-          sentiment: comment.sentiment || 'neutral', // Use sentiment from database
-          confidence: comment.sentiment ? 0.8 : undefined, // Default confidence if sentiment exists
-          score: comment.score,
-          created_utc: comment.created_utc ? new Date(comment.created_utc).getTime() / 1000 : 0,
-          author: comment.author,
-          subreddit: comment.subreddit,
-          permalink: comment.permalink,
-          explanation: comment.sentiment_explanation || undefined,
-        })) || [];
-
-        // Update profileData with database content (replace, don't append)
-        if (postSentiments.length > 0 || commentSentiments.length > 0) {
-          setProfileData(prev => ({
-            ...prev,
-            postSentiments: postSentiments, // Replace entirely
-            commentSentiments: commentSentiments, // Replace entirely
-            // Add default activityPattern if not present
-            activityPattern: prev?.activityPattern || { mostActiveHour: 'N/A', mostActiveDay: 'N/A', timezone: 'PKT' },
-          }));
-          console.log(`Loaded ${postSentiments.length} posts and ${commentSentiments.length} comments from database`);
-        }
-      } catch (error) {
-        console.error('Error fetching Reddit content from database:', error);
-      }
-    };
-
-    fetchRedditContent();
-
-    // Listen for Reddit content updates
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail?.caseId === currentCase?.id && detail?.kind === 'redditContent') {
-        console.log('Reddit content updated, refreshing...');
-        fetchRedditContent();
-      }
-    };
-
-    window.addEventListener('case-data-updated', handler);
-    return () => window.removeEventListener('case-data-updated', handler);
-  }, [currentCase?.id, profileData?.username]);
 
   const loadSavedProfile = async (profileId: string) => {
     setIsLoading(true);
@@ -927,31 +817,11 @@ const UserProfiling = () => {
     { name: 'Sun', value: 28 },
   ];
 
-  // Calculate actual sentiment distribution from profile data
-  const sentimentChartData = useMemo(() => {
-    const allSentiments = [
-      ...(profileData?.postSentiments || []),
-      ...(profileData?.commentSentiments || [])
-    ];
-    
-    if (allSentiments.length === 0) {
-      return [
-        { name: 'Positive', value: 0 },
-        { name: 'Neutral', value: 0 },
-        { name: 'Negative', value: 0 },
-      ];
-    }
-    
-    const positive = allSentiments.filter(s => s.sentiment === 'positive').length;
-    const neutral = allSentiments.filter(s => s.sentiment === 'neutral').length;
-    const negative = allSentiments.filter(s => s.sentiment === 'negative').length;
-    
-    return [
-      { name: 'Positive', value: Math.round((positive / allSentiments.length) * 100) },
-      { name: 'Neutral', value: Math.round((neutral / allSentiments.length) * 100) },
-      { name: 'Negative', value: Math.round((negative / allSentiments.length) * 100) },
-    ];
-  }, [profileData?.postSentiments, profileData?.commentSentiments]);
+  const sentimentChartData = [
+    { name: 'Positive', value: 45 },
+    { name: 'Neutral', value: 35 },
+    { name: 'Negative', value: 20 },
+  ];
 
   const subredditActivityData = [
     { name: 'r/technology', value: 156 },
@@ -1030,20 +900,19 @@ const UserProfiling = () => {
       setTargetProgress(60);
 
       // Analyze content for sentiment and locations
-      let analysisData = null;
-      try {
-        analysisData = await analyzeWithHuggingFace(
-          redditData.posts || [],
-          redditData.comments || []
-        );
-        console.log('[UserProfiling] Hugging Face analysis completed');
-        console.log('[UserProfiling] Post sentiments sample:', analysisData?.postSentiments?.slice(0, 3));
-        console.log('[UserProfiling] Comment sentiments sample:', analysisData?.commentSentiments?.slice(0, 3));
-        console.log('[UserProfiling] Sentiment breakdown:', analysisData?.sentimentBreakdown);
-      } catch (analysisError) {
-        console.error('[UserProfiling] Analysis error:', analysisError);
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
+        body: {
+          posts: redditData.posts || [],
+          comments: redditData.comments || []
+        }
+      });
+
+      if (analysisError) {
+        console.error('Analysis error:', analysisError);
         // Continue even if analysis fails
       }
+
+      console.log('Analysis completed');
       setTargetProgress(90);
 
       // Calculate account age
@@ -1134,26 +1003,6 @@ const UserProfiling = () => {
       // Fix any URL encoding issues (Reddit sometimes returns escaped URLs)
       const cleanAvatarUrl = avatarUrl ? avatarUrl.replace(/&amp;/g, '&') : null;
 
-      // Calculate top subreddits from actual posts data
-      const subredditCounts: Record<string, number> = {};
-      (redditData.posts || []).forEach((post: any) => {
-        const sub = post.subreddit;
-        if (sub) {
-          subredditCounts[sub] = (subredditCounts[sub] || 0) + 1;
-        }
-      });
-      (redditData.comments || []).forEach((comment: any) => {
-        const sub = comment.subreddit;
-        if (sub) {
-          subredditCounts[sub] = (subredditCounts[sub] || 0) + 1;
-        }
-      });
-      
-      const topSubreddits = Object.entries(subredditCounts)
-        .sort(([,a], [,b]) => (b as number) - (a as number))
-        .slice(0, 10)
-        .map(([name, count]) => ({ name: `r/${name}`, count }));
-
       const profileResult = {
         username: cleanUsername,
         avatar: cleanAvatarUrl,
@@ -1163,7 +1012,7 @@ const UserProfiling = () => {
         totalKarma: redditData.user.link_karma + redditData.user.comment_karma,
         postKarma: redditData.user.link_karma,
         commentKarma: redditData.user.comment_karma,
-        activeSubreddits: topSubreddits,
+        activeSubreddits: analysisData?.topSubreddits || [],
         activityPattern: {
           mostActiveHour: mostActiveHour ? `${mostActiveHour[0]}:00-${parseInt(mostActiveHour[0])+1}:00 PKT` : 'N/A',
           mostActiveDay: mostActiveDay?.[0] || 'N/A',
@@ -1276,9 +1125,7 @@ const UserProfiling = () => {
             const result = await saveRedditContentToDb(
               redditData.posts || [], 
               redditData.comments || [], 
-              'user_profile',
-              analysisData?.postSentiments || [],
-              analysisData?.commentSentiments || []
+              'user_profile'
             );
             console.log(`User Profiling: Saved ${result.totalInserted} Reddit items to database`);
           } catch (error: any) {
@@ -1373,8 +1220,7 @@ const UserProfiling = () => {
           ? deepState.result.shap_explanation?.word_contributions
           : deepState.result.deep_explanation?.word_contributions) || [];
       }
-      // Try word_importance from metadata (from database), then from item, then word_contributions
-      return (item.metadata?.word_importance || item.word_importance || item.word_contributions || []) || [];
+      return (item.word_contributions || []) || [];
     };
 
     // Get correct sentiment label based on highest probability
@@ -1527,7 +1373,7 @@ const UserProfiling = () => {
     return (
       <div
         key={itemKey}
-        className="group relative rounded-lg border border-slate-200 bg-white p-3 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
+        className="group relative rounded-lg border border-border bg-card p-3 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
         onClick={() => item.permalink && window.open(`https://www.reddit.com${item.permalink}`, '_blank')}
       >
         <div className="flex items-start gap-2.5">
@@ -1537,7 +1383,7 @@ const UserProfiling = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0">
-                <span className="font-medium text-slate-900 truncate">u/{profileData.username}</span>
+                <span className="font-medium text-foreground truncate">u/{profileData.username}</span>
                 {item.subreddit && <span className="text-slate-400">in r/{item.subreddit}</span>}
               </div>
               <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${sentimentTone(item.sentiment)}`}>
@@ -1573,7 +1419,7 @@ const UserProfiling = () => {
             <div className="flex items-center gap-3 mt-2 pt-2 border-t border-slate-100">
               <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-1">
                 <button 
-                  className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-orange-500 transition-colors"
+                  className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-orange-500 transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -1584,7 +1430,7 @@ const UserProfiling = () => {
                   {item.score >= 1000 ? (item.score / 1000).toFixed(1) + 'K' : item.score || 0}
                 </span>
                 <button 
-                  className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-blue-500 transition-colors"
+                  className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-blue-500 transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -1614,15 +1460,20 @@ const UserProfiling = () => {
     );
   };
 
-  const sentimentPieData = (b: any) => b ? [
-    { name: 'Positive', value: Math.round(b.positive), color: SENT_COLORS.positive },
-    { name: 'Neutral', value: Math.round(b.neutral), color: SENT_COLORS.neutral },
-    { name: 'Negative', value: Math.round(b.negative), color: SENT_COLORS.negative },
-  ] : [];
+  const sentimentPieData = (b: any) => {
+  console.log('Sentiment breakdown data:', b);
+  const data = b ? [
+    { name: 'Positive', value: Math.round((b.positive || 0) * 100), color: SENT_COLORS.positive },
+    { name: 'Neutral', value: Math.round((b.neutral || 0) * 100), color: SENT_COLORS.neutral },
+    { name: 'Negative', value: Math.round((b.negative || 0) * 100), color: SENT_COLORS.negative },
+  ].filter(item => item.value > 0) : [];
+  console.log('Processed pie data:', data);
+  return data;
+};
 
   return (
     <TooltipProvider>
-    <div className="p-6 space-y-5 relative bg-slate-50/50 min-h-screen">
+    <div className="p-6 space-y-5 relative bg-background min-h-screen">
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60">
           <div className="flex flex-col items-center gap-3 bg-card border border-border rounded-xl shadow-2xl px-8 py-6">
@@ -1633,14 +1484,14 @@ const UserProfiling = () => {
 
       {/* Page Header */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">User Profiling</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">User Profiling</h2>
         <p className="text-muted-foreground">
           Open-Source Reddit User Intelligence, Profiling & Behavior Mapping
         </p>
       </div>
 
       {/* Search Bar */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-border shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
@@ -1650,7 +1501,7 @@ const UserProfiling = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAnalyzeUser()}
-                className="pr-10 h-10 border-slate-200"
+                className="pr-10 h-10 border-border"
               />
               {username && (
                 <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setUsername('')}>
@@ -1670,14 +1521,14 @@ const UserProfiling = () => {
         </CardContent>
       </Card>
 
-      {profileData && intel && (
+      {profileData && (
         <>
           <Button variant="ghost" size="sm" className="gap-2 text-slate-600" onClick={() => { setProfileData(null); setError(null); }}>
             <ArrowLeft className="h-4 w-4" /> Back to Overview
           </Button>
 
           {/* === PREMIUM PROFILE HEADER === */}
-          <Card className="border-slate-200 shadow-sm overflow-hidden bg-white">
+          <Card className="border-border shadow-sm overflow-hidden bg-card">
             <CardContent className="p-5">
               <div className="flex items-center gap-6">
                 {/* LEFT: Avatar + name */}
@@ -1700,7 +1551,7 @@ const UserProfiling = () => {
                     <a
                       href={`https://www.reddit.com/user/${profileData.username}`}
                       target="_blank" rel="noopener noreferrer"
-                      className="text-lg font-bold text-slate-900 hover:text-blue-600 inline-flex items-center gap-1.5"
+                      className="text-lg font-bold text-foreground hover:text-blue-600 inline-flex items-center gap-1.5"
                     >
                       u/{profileData.username}
                       <ExternalLink className="h-3.5 w-3.5 opacity-60" />
@@ -1716,25 +1567,25 @@ const UserProfiling = () => {
                     <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
                       <ThumbsUp className="h-3 w-3" /> Karma
                     </div>
-                    <div className="text-lg font-bold text-slate-900">{(profileData.totalKarma || 0).toLocaleString()}</div>
+                    <div className="text-lg font-bold text-foreground">{(profileData.totalKarma || 0).toLocaleString()}</div>
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
                       <Calendar className="h-3 w-3" /> Account Age
                     </div>
-                    <div className="text-sm font-bold text-slate-900 mt-0.5">{profileData.accountAge}</div>
+                    <div className="text-sm font-bold text-foreground mt-0.5">{profileData.accountAge}</div>
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
                       <MessageSquare className="h-3 w-3" /> Posts
                     </div>
-                    <div className="text-lg font-bold text-slate-900">{(profileData.postsCount || 0).toLocaleString()}</div>
+                    <div className="text-lg font-bold text-foreground">{(profileData.postsCount || 0).toLocaleString()}</div>
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
                       <MessageCircle className="h-3 w-3" /> Comments
                     </div>
-                    <div className="text-lg font-bold text-slate-900">{(profileData.commentsCount || 0).toLocaleString()}</div>
+                    <div className="text-lg font-bold text-foreground">{(profileData.commentsCount || 0).toLocaleString()}</div>
                   </div>
                 </div>
               </div>
@@ -1745,7 +1596,7 @@ const UserProfiling = () => {
           <div className="grid grid-cols-1 lg:grid-cols-10 gap-5">
             {/* === LEFT: UNIFIED INTELLIGENCE FEED (70%) === */}
             <div className="lg:col-span-7">
-              <Card className="border-slate-200 shadow-sm h-full">
+              <Card className="border-border shadow-sm h-full">
                 <CardHeader className="pb-3 border-b border-slate-100">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -1756,7 +1607,7 @@ const UserProfiling = () => {
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Posts</span>
                         <Select value={postsSort} onValueChange={(v) => setPostsSort(v as any)}>
-                          <SelectTrigger className="h-8 w-[110px] text-xs border-slate-200">
+                          <SelectTrigger className="h-8 w-[110px] text-xs border-border">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1768,7 +1619,7 @@ const UserProfiling = () => {
                       <div className="flex items-center gap-1.5">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Comments</span>
                         <Select value={commentsSort} onValueChange={(v) => setCommentsSort(v as any)}>
-                          <SelectTrigger className="h-8 w-[110px] text-xs border-slate-200">
+                          <SelectTrigger className="h-8 w-[110px] text-xs border-border">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1850,7 +1701,7 @@ const UserProfiling = () => {
             {/* === RIGHT SIDEBAR (30%) === */}
             <div className="lg:col-span-3 space-y-5">
               {/* Behavioral Intelligence */}
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-border shadow-sm">
                 <CardHeader className="pb-2.5 border-b border-slate-100">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <Activity className="h-4 w-4 text-blue-600" /> Behavioral Intelligence
@@ -1858,45 +1709,41 @@ const UserProfiling = () => {
                 </CardHeader>
                 <CardContent className="p-4 space-y-2.5 text-xs">
                   {[
-                    { label: 'Most Active Hour', value: profileData?.activityPattern?.mostActiveHour || 'N/A', icon: Clock },
-                    { label: 'Most Active Day', value: profileData?.activityPattern?.mostActiveDay || 'N/A', icon: Calendar },
+                    { label: 'Most Active Hour', value: profileData.activityPattern.mostActiveHour, icon: Clock },
+                    { label: 'Most Active Day', value: profileData.activityPattern.mostActiveDay, icon: Calendar },
                     { label: 'Posting Frequency', value: `${(((profileData.postsCount || 0) + (profileData.commentsCount || 0)) / Math.max(1, (profileData.monthlyActivity?.length || 1))).toFixed(1)} / month`, icon: TrendingUp },
                     { label: 'Avg Engagement', value: `${Math.round((profileData.totalKarma || 0) / Math.max(1, (profileData.postsCount || 0) + (profileData.commentsCount || 0)))} karma/item`, icon: ThumbsUp },
-                    { label: 'Estimated Timezone', value: profileData?.activityPattern?.timezone || 'N/A', icon: Globe },
+                    { label: 'Estimated Timezone', value: profileData.activityPattern.timezone, icon: Globe },
                   ].map((row, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 last:border-0">
                       <div className="flex items-center gap-1.5 text-slate-500">
                         <row.icon className="h-3 w-3" />
                         <span>{row.label}</span>
                       </div>
-                      <span className="font-semibold text-slate-900 text-right truncate max-w-[55%]">{row.value}</span>
+                      <span className="font-semibold text-foreground text-right truncate max-w-[55%]">{row.value}</span>
                     </div>
                   ))}
                 </CardContent>
               </Card>
 
               {/* Possible Location Indicators */}
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-border shadow-sm">
                 <CardHeader className="pb-2.5 border-b border-slate-100">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-blue-600" /> Possible Location Indicators
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-slate-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-xs">AI-detected location signals from posts, comments, and language patterns.</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 space-y-1.5">
-                  {(profileData.locationIndicators || [])
-                    .filter((loc: string) => {
-                      // Filter out non-geographical terms
-                      const nonGeographicTerms = [
-                        'reddit', 'r/', 'www', 'com', 'http', 'https', 'www.reddit.com',
-                        'username', 'user', 'profile', 'account', 'online', 'digital',
-                        'social', 'media', 'platform', 'forum', 'community', 'subreddit'
-                      ];
-                      const lowerLoc = loc.toLowerCase();
-                      return !nonGeographicTerms.some(term => lowerLoc.includes(term)) && loc.length > 1;
-                    })
-                    .slice(0, 6)
-                    .map((loc: string, i: number) => (
-                    <div key={i} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-slate-50 border border-slate-100">
+                  {(profileData.locationIndicators || []).slice(0, 6).map((loc: string, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-muted border border-border">
                       <MapPin className="h-3 w-3 text-blue-500 flex-shrink-0" />
                       <span className="text-slate-700 truncate">{loc}</span>
                     </div>
@@ -1905,7 +1752,7 @@ const UserProfiling = () => {
               </Card>
 
               {/* Dual Sentiment Charts */}
-              <Card className="border-slate-200 shadow-sm">
+              <Card className="border-border shadow-sm">
                 <CardHeader className="pb-2.5 border-b border-slate-100">
                   <CardTitle className="flex items-center gap-2 text-sm">
                     <BarChart3 className="h-4 w-4 text-blue-600" /> Sentiment Distribution
@@ -2020,7 +1867,7 @@ const UserProfiling = () => {
           {/* === BOTTOM ANALYTICS ROW === */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Top Communities */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-border shadow-sm">
               <CardHeader className="pb-2.5 border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Hash className="h-4 w-4 text-blue-600" /> Top Communities
@@ -2032,7 +1879,7 @@ const UserProfiling = () => {
             </Card>
 
             {/* Keyword Intelligence */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-border shadow-sm">
               <CardHeader className="pb-2.5 border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
@@ -2106,7 +1953,7 @@ const UserProfiling = () => {
             </Card>
 
             {/* Posting Activity Timeline */}
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-border shadow-sm">
               <CardHeader className="pb-2.5 border-b border-slate-100">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <TrendingUp className="h-4 w-4 text-blue-600" /> Posting Activity Timeline
@@ -2241,11 +2088,11 @@ const UserProfiling = () => {
               </div>
             </>
           )}
-          <Card className="border-dashed border-gray-300 bg-white">
+          <Card className="border-dashed border-border bg-card">
             <CardContent className="py-12 text-center">
-              <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Enter a username to perform detailed profile analysis</p>
-              <p className="text-xs text-gray-500 mt-2">Real-time data fetched from Reddit API</p>
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-foreground">Enter a username to perform detailed profile analysis</p>
+              <p className="text-xs text-muted-foreground mt-2">Real-time data fetched from Reddit API</p>
             </CardContent>
           </Card>
         </div>

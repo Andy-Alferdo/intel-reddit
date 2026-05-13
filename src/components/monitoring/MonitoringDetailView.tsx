@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { User, Users, Calendar, TrendingUp, FileText, MessageSquare, ExternalLink, StopCircle, ArrowLeft, BarChart3, Hash } from 'lucide-react';
+import { User, Users, Calendar, TrendingUp, FileText, MessageSquare, ExternalLink, StopCircle, ArrowLeft, BarChart3, Hash, CheckCircle } from 'lucide-react';
 import { AnalyticsChart } from '@/components/AnalyticsChart';
 import DailyPostBreakdownChart from './DailyPostBreakdownChart';
+import { useInvestigation } from '@/contexts/InvestigationContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface RedditActivity {
   id: string;
@@ -152,29 +154,92 @@ export const MonitoringDetailView = ({
   const navigate = useNavigate();
   const [visiblePosts, setVisiblePosts] = useState(10);
   const [visibleComments, setVisibleComments] = useState(10);
+  const { toast } = useToast();
+  const { userProfiles, communityAnalyses } = useInvestigation();
 
   const isUser = !!profileData.username;
   const isCommunity = !!profileData.communityName;
   const targetName = profileData.username || profileData.communityName || '';
 
+  // Check if user is already analyzed (local state or database)
+  const checkUserAnalysisExists = useCallback((username: string): boolean => {
+    const cleanUsername = username.replace(/^u\//, '');
+    return userProfiles.some(profile => 
+      profile.username.toLowerCase() === cleanUsername.toLowerCase()
+    );
+  }, [userProfiles]);
+
+  // Check if community is already analyzed (local state or database)
+  const checkCommunityAnalysisExists = useCallback((subreddit: string): boolean => {
+    const cleanSubreddit = subreddit.replace(/^r\//, '');
+    return communityAnalyses.some(analysis => 
+      analysis.name.toLowerCase() === cleanSubreddit.toLowerCase()
+    );
+  }, [communityAnalyses]);
+
   const handleAddToUserProfiling = () => {
-    // Navigate to user profiling page with pre-filled username
     const cleanUsername = profileData.username?.replace(/^u\//, '') || '';
+    
+    // Check if user is already analyzed
+    if (checkUserAnalysisExists(cleanUsername)) {
+      toast({
+        title: 'Already Analyzed',
+        description: 'Opening existing analysis results...',
+      });
+      // Navigate to user profiling with pre-filled username to view results
+      navigate('/user-profiling', { 
+        state: { 
+          prefillUsername: cleanUsername,
+          viewOnly: true
+        } 
+      });
+      return;
+    }
+
+    // User not analyzed - trigger analysis
+    toast({
+      title: 'Starting Analysis',
+      description: `Initiating user profiling for u/${cleanUsername}...`,
+    });
     navigate('/user-profiling', { 
       state: { 
-        prefillUsername: cleanUsername 
+        prefillUsername: cleanUsername,
+        autoAnalyze: true
       } 
     });
   };
 
   const handleAddToCommunityAnalysis = () => {
-    // Navigate to analysis page with pre-filled community and switch to community tab
     const cleanCommunity = profileData.communityName?.replace(/^r\//, '') || '';
-    navigate('/analysis', { 
-      state: { 
+
+    // Check if community is already analyzed
+    if (checkCommunityAnalysisExists(cleanCommunity)) {
+      toast({
+        title: 'Already Analyzed',
+        description: 'Opening existing community analysis results...',
+      });
+      // Navigate to analysis page with community tab active to view results
+      navigate('/analysis', {
+        state: {
+          prefillCommunity: cleanCommunity,
+          activeTab: 'community',
+          viewOnly: true
+        }
+      });
+      return;
+    }
+
+    // Community not analyzed - trigger analysis
+    toast({
+      title: 'Starting Analysis',
+      description: `Initiating community analysis for r/${cleanCommunity}...`,
+    });
+    navigate('/analysis', {
+      state: {
         prefillCommunity: cleanCommunity,
-        activeTab: 'community'
-      } 
+        activeTab: 'community',
+        autoAnalyze: true
+      }
     });
   };
 
@@ -272,7 +337,15 @@ export const MonitoringDetailView = ({
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <h1 className="text-xl font-bold text-foreground">
-                      {targetName}
+                      <a 
+                        href={`https://reddit.com/${targetName}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline transition-colors flex items-center gap-1"
+                      >
+                        {targetName}
+                        <ExternalLink className="h-4 w-4 inline" />
+                      </a>
                     </h1>
                   </div>
                   <p className="text-sm text-muted-foreground max-w-md line-clamp-2">
@@ -306,10 +379,15 @@ export const MonitoringDetailView = ({
                           onClick={handleAddToUserProfiling} 
                           size="sm"
                           variant="outline"
-                          className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-black gap-1.5 rounded-xl"
+                          className={checkUserAnalysisExists(profileData.username?.replace(/^u\//, '') || '') 
+                            ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-black gap-1.5 rounded-xl" 
+                            : "border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-black gap-1.5 rounded-xl"}
                         >
-                          <User className="h-4 w-4" />
-                          Add to User Profiling
+                          {checkUserAnalysisExists(profileData.username?.replace(/^u\//, '') || '') ? (
+                            <><CheckCircle className="h-4 w-4" /> View Analysis</>
+                          ) : (
+                            <><User className="h-4 w-4" /> Add to User Profiling</>
+                          )}
                         </Button>
                       )}
                       {isCommunity && (
@@ -317,10 +395,15 @@ export const MonitoringDetailView = ({
                           onClick={handleAddToCommunityAnalysis} 
                           size="sm"
                           variant="outline"
-                          className="border-green-200 text-green-700 hover:bg-green-50 hover:text-black gap-1.5 rounded-xl"
+                          className={checkCommunityAnalysisExists(profileData.communityName?.replace(/^r\//, '') || '') 
+                            ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-black gap-1.5 rounded-xl" 
+                            : "border-green-200 text-green-700 hover:bg-green-50 hover:text-black gap-1.5 rounded-xl"}
                         >
-                          <Users className="h-4 w-4" />
-                          Add to Community Analysis
+                          {checkCommunityAnalysisExists(profileData.communityName?.replace(/^r\//, '') || '') ? (
+                            <><CheckCircle className="h-4 w-4" /> View Analysis</>
+                          ) : (
+                            <><Users className="h-4 w-4" /> Add to Community Analysis</>
+                          )}
                         </Button>
                       )}
                     </div>
@@ -345,10 +428,15 @@ export const MonitoringDetailView = ({
                           onClick={handleAddToUserProfiling} 
                           size="sm"
                           variant="outline"
-                          className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-black gap-1.5 rounded-xl"
+                          className={checkUserAnalysisExists(profileData.username?.replace(/^u\//, '') || '') 
+                            ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-black gap-1.5 rounded-xl" 
+                            : "border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-black gap-1.5 rounded-xl"}
                         >
-                          <User className="h-4 w-4" />
-                          Add to User Profiling
+                          {checkUserAnalysisExists(profileData.username?.replace(/^u\//, '') || '') ? (
+                            <><CheckCircle className="h-4 w-4" /> View Analysis</>
+                          ) : (
+                            <><User className="h-4 w-4" /> Add to User Profiling</>
+                          )}
                         </Button>
                       )}
                       {isCommunity && (
@@ -356,10 +444,15 @@ export const MonitoringDetailView = ({
                           onClick={handleAddToCommunityAnalysis} 
                           size="sm"
                           variant="outline"
-                          className="border-green-200 text-green-700 hover:bg-green-50 hover:text-black gap-1.5 rounded-xl"
+                          className={checkCommunityAnalysisExists(profileData.communityName?.replace(/^r\//, '') || '') 
+                            ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-black gap-1.5 rounded-xl" 
+                            : "border-green-200 text-green-700 hover:bg-green-50 hover:text-black gap-1.5 rounded-xl"}
                         >
-                          <Users className="h-4 w-4" />
-                          Add to Community Analysis
+                          {checkCommunityAnalysisExists(profileData.communityName?.replace(/^r\//, '') || '') ? (
+                            <><CheckCircle className="h-4 w-4" /> View Analysis</>
+                          ) : (
+                            <><Users className="h-4 w-4" /> Add to Community Analysis</>
+                          )}
                         </Button>
                       )}
                     </div>
@@ -473,7 +566,15 @@ export const MonitoringDetailView = ({
                             >
                               <p className="text-sm font-medium line-clamp-2 leading-snug">{activity.title}</p>
                               <div className="flex items-center justify-between mt-1.5">
-                                <span className="text-xs text-blue-600 font-medium">{activity.subreddit}</span>
+                                <a 
+                                  href={`https://reddit.com/r/${activity.subreddit}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {activity.subreddit}
+                                </a>
                                 <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
                               </div>
                             </div>
@@ -525,7 +626,15 @@ export const MonitoringDetailView = ({
                             >
                               <p className="text-sm font-medium line-clamp-2 leading-snug">{activity.title}</p>
                               <div className="flex items-center justify-between mt-1.5">
-                                <span className="text-xs text-blue-600 font-medium">{activity.subreddit}</span>
+                                <a 
+                                  href={`https://reddit.com/r/${activity.subreddit}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {activity.subreddit}
+                                </a>
                                 <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
                               </div>
                             </div>
@@ -582,7 +691,15 @@ export const MonitoringDetailView = ({
                           >
                             <p className="text-sm font-medium line-clamp-2 leading-snug">{activity.title}</p>
                             <div className="flex items-center justify-between mt-1.5">
-                              <span className="text-xs text-blue-600 font-medium">{activity.subreddit}</span>
+                              <a 
+                                href={`https://reddit.com/r/${activity.subreddit}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {activity.subreddit}
+                              </a>
                               <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
                             </div>
                           </div>

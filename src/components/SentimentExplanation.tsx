@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Brain, TrendingUp, AlertTriangle, MessageSquare, Zap } from 'lucide-react';
+import { getModelServerUrl } from '../config/api';
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -49,9 +50,17 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
   const handleDeepAnalysis = async () => {
     setIsDeepAnalyzing(true);
     try {
-      const { analyzeDeep } = await import('@/integrations/huggingface/client');
-      const result = await analyzeDeep(text);
-      
+      const response = await fetch(getModelServerUrl('/deep-analysis'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Deep analysis failed: ${response.statusText}`);
+      }
+
+      const result: DeepAnalysisResponse = await response.json();
       setDeepAnalysis(result);
       setShowDeepAnalysis(true);
       toast({
@@ -69,33 +78,39 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
       setIsDeepAnalyzing(false);
     }
   };
+
   const getSentimentColor = (sent: string) => {
     switch (sent?.toLowerCase()) {
       case 'positive':
-        return 'text-green-600 bg-green-50 border-green-200';
+        return 'bg-green-100 text-green-700 border-green-300';
       case 'negative':
-        return 'text-red-600 bg-red-50 border-red-200';
+        return 'bg-red-100 text-red-700 border-red-300';
       default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+        return 'bg-gray-100 text-gray-700 border-gray-300';
     }
   };
 
-  const getKeywordColor = (type: string) => {
-    switch (type) {
+  const getBarColor = (sentiment: string) => {
+    switch (sentiment?.toLowerCase()) {
       case 'positive':
-        return 'bg-green-100 text-green-800 border-green-300';
+        return 'bg-green-500';
       case 'negative':
-        return 'bg-red-100 text-red-800 border-red-300';
+        return 'bg-red-500';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return 'bg-gray-400';
     }
   };
 
-  const getConfidenceLevel = (confidence: number) => {
-    if (confidence > 0.9) return { level: 'Very High', color: 'bg-green-500' };
-    if (confidence > 0.7) return { level: 'High', color: 'bg-blue-500' };
-    if (confidence > 0.5) return { level: 'Moderate', color: 'bg-yellow-500' };
-    return { level: 'Low', color: 'bg-red-500' };
+  const getPullDirection = (contribution: number) => {
+    if (contribution > 0) return 'pull positive';
+    if (contribution < 0) return 'pull negative';
+    return 'neutral';
+  };
+
+  const getPullColor = (contribution: number) => {
+    if (contribution > 0) return 'text-green-600';
+    if (contribution < 0) return 'text-red-600';
+    return 'text-gray-500';
   };
 
   const explanationObj = typeof explanation === 'string' ? null : explanation;
@@ -103,147 +118,88 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
   const wordContributions = explanationObj?.word_contributions || [];
   const importanceScores = explanationObj?.importance_scores || [];
 
+  // Combine word contributions and importance scores for word signals
+  const wordSignals = wordContributions.length > 0 
+    ? wordContributions.map(w => ({
+        word: w.word,
+        contribution: w.contribution || w.importance || 0,
+        sentiment: w.sentiment
+      }))
+    : importanceScores.map(w => ({
+        word: w.word,
+        contribution: w.score,
+        sentiment: w.score > 0 ? 'positive' : w.score < 0 ? 'negative' : 'neutral'
+      }));
+
+  // Sort by absolute contribution
+  const sortedWordSignals = wordSignals
+    .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+    .slice(0, 5);
+
+  const maxContribution = sortedWordSignals.length > 0 
+    ? Math.max(...sortedWordSignals.map(s => Math.abs(s.contribution)))
+    : 1;
+
   return (
-    <Card className="mt-4 border-l-4 border-l-blue-500 shadow-sm">
+    <Card className="mt-4 shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Brain className="h-5 w-5 text-blue-600" />
-          Sentiment Analysis Explanation
-        </CardTitle>
+        <CardTitle className="text-base font-semibold">Sentiment analysis</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Classification Result */}
+        {/* Sentiment Badge and Confidence */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-medium">Classification:</span>
-            <Badge 
-              variant="outline" 
-              className={`text-sm font-medium px-3 py-1 ${getSentimentColor(sentiment)}`}
-            >
-              {sentiment?.charAt(0).toUpperCase() + sentiment?.slice(1)}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MessageSquare className="h-4 w-4" />
-            {explanationObj?.text_length || text.split(' ').length} words
-          </div>
+          <Badge 
+            variant="outline" 
+            className={`text-sm font-medium px-3 py-1 ${getSentimentColor(sentiment)}`}
+          >
+            {sentiment?.charAt(0).toUpperCase() + sentiment?.slice(1)}
+          </Badge>
+          <span className="text-2xl font-bold text-gray-900">
+            {Math.round(confidence * 100)}%
+          </span>
         </div>
 
-        {/* Explanation Method */}
-        {explanationObj?.explanation_method && (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Method:</span>
-              <Badge variant="outline" className="text-xs">
-                {explanationObj.explanation_method === 'SHAP' ? '🧠 SHAP' : 
-                 explanationObj.explanation_method === 'LIME' ? '🍋 LIME' : '📝 Rule-based'}
-              </Badge>
-            </div>
-            <Button
-              onClick={handleDeepAnalysis}
-              disabled={isDeepAnalyzing}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-            >
-              <Zap className="h-3 w-3 mr-1" />
-              {isDeepAnalyzing ? 'Analyzing...' : 'Deep Analysis'}
-            </Button>
-          </div>
-        )}
-
-        {/* Confidence Score */}
-        {explanationObj && (
+        {/* WORD SIGNALS Section */}
+        {sortedWordSignals.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Confidence Score
-              </h4>
-              <span className="text-sm font-medium">
-                {explanationObj.confidence} ({getConfidenceLevel(confidence).level})
-              </span>
-            </div>
-            <div className="relative">
-              <Progress 
-                value={confidence * 100} 
-                className="h-2"
-              />
-              <div 
-                className={`absolute top-0 h-2 w-1 rounded-full ${getConfidenceLevel(confidence).color}`}
-                style={{ left: `${confidence * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Reasoning */}
-        {explanationObj && (
-          <div>
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              AI Reasoning
-            </h4>
-            <p className="text-sm text-muted-foreground leading-relaxed bg-gray-50 p-3 rounded-lg border">
-              {explanationObj.reasoning}
-            </p>
-          </div>
-        )}
-
-        {/* Word Contributions (SHAP/LIME) */}
-        {wordContributions.length > 0 && (
-          <div>
-            <h4 className="font-medium mb-2">Word-Level Contributions</h4>
-            <div className="space-y-2">
-              {wordContributions.slice(0, 8).map((contrib, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{contrib.word}</span>
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs px-2 py-1 ${getKeywordColor(contrib.sentiment)}`}
-                    >
-                      {contrib.sentiment}
-                    </Badge>
+            <h4 className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide">WORD SIGNALS</h4>
+            <div className="space-y-3">
+              {sortedWordSignals.map((signal, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700 w-20">{signal.word}</span>
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${getBarColor(signal.sentiment)}`}
+                      style={{ width: `${(Math.abs(signal.contribution) / maxContribution) * 100}%` }}
+                    />
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs text-muted-foreground">
-                      {contrib.importance ? `Impact: ${contrib.importance.toFixed(3)}` : 
-                       contrib.contribution ? `Score: ${contrib.contribution.toFixed(3)}` : ''}
-                    </span>
-                  </div>
+                  <span className={`text-xs ${getPullColor(signal.contribution)}`}>
+                    {getPullDirection(signal.contribution)}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Key Indicators (Fallback) */}
-        {explanationObj?.key_words && explanationObj.key_words.length > 0 && (
-          <div>
-            <h4 className="font-medium mb-2">Key Indicators</h4>
-            <div className="flex flex-wrap gap-2">
-              {explanationObj.key_words.map((keyword: SentimentKeyword, index: number) => (
-                <Badge 
-                  key={index} 
-                  variant="outline" 
-                  className={`text-xs px-2 py-1 border ${getKeywordColor(keyword.sentiment)}`}
-                >
-                  {keyword.word}
-                  <span className="ml-1 opacity-60">({keyword.sentiment})</span>
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Informational Note */}
+        <p className="text-xs text-gray-500 leading-relaxed">
+          This analysis identifies key words that influence the sentiment prediction. Words with higher bars have stronger impact on the classification.
+        </p>
 
-        {/* Text Preview */}
-        <div>
-          <h4 className="font-medium mb-2">Analyzed Text</h4>
-          <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-lg border max-h-32 overflow-y-auto">
-            {text.length > 200 ? `${text.substring(0, 200)}...` : text}
-          </div>
-        </div>
+        {/* Deep Analysis Button */}
+        {explanationObj?.explanation_method && (
+          <Button
+            onClick={handleDeepAnalysis}
+            disabled={isDeepAnalyzing}
+            variant="outline"
+            size="sm"
+            className="text-xs"
+          >
+            <Zap className="h-3 w-3 mr-1" />
+            {isDeepAnalyzing ? 'Analyzing...' : 'Deep Analysis'}
+          </Button>
+        )}
 
         {/* Deep Analysis Results */}
         {showDeepAnalysis && deepAnalysis && (
@@ -291,7 +247,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
                           <span className="font-medium text-sm">{contrib.word}</span>
                           <Badge 
                             variant="outline" 
-                            className={`text-xs px-2 py-1 ${getKeywordColor(contrib.sentiment)}`}
+                            className={`text-xs px-2 py-1 ${getSentimentColor(contrib.sentiment)}`}
                           >
                             {contrib.sentiment}
                           </Badge>

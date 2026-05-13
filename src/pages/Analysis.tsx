@@ -1,3 +1,4 @@
+import { getModelServerUrl } from '../config/api';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +27,6 @@ import { formatActivityTime } from '@/lib/dateUtils';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
 import KeywordAnalysisDashboard from '@/components/keyword-analysis/KeywordAnalysisDashboard';
-import { analyzeWithHuggingFace, SentimentItem as HFSentimentItem, wakeUpSpace } from '@/integrations/huggingface/client';
 
 interface SentimentItem {
   text: string;
@@ -103,19 +103,28 @@ const Analysis = () => {
     } catch { /* ignore */ }
   }, [currentCase?.id]);
 
-  // Fetch deep analysis for a post - using Gradio client
+  // Fetch deep analysis for a post - directly from Python server (like UserProfiling)
   const fetchDeepAnalysis = useCallback(async (postIndex: number, text: string) => {
     if (loadingDeepAnalysis[postIndex] || deepAnalysisData[postIndex]) return;
     
     setLoadingDeepAnalysis(prev => ({ ...prev, [postIndex]: true }));
     try {
-      const { analyzeDeep } = await import('@/integrations/huggingface/client');
-      const result = await analyzeDeep(text);
+      const response = await fetch(getModelServerUrl('/deep-analysis'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Deep analysis failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
       
-      if (result?.explanation) {
+      if (result?.deep_explanation) {
         setDeepAnalysisData(prev => ({ 
           ...prev, 
-          [postIndex]: result.explanation 
+          [postIndex]: result.deep_explanation 
         }));
       }
     } catch (err) {
@@ -344,13 +353,15 @@ const Analysis = () => {
       const postsForAnalysis = [...recent20Pre, ...uniqueTop];
       
       try {
-        const hfResult = await analyzeWithHuggingFace(
-          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          []
-        );
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
+          body: {
+            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+            comments: []
+          }
+        });
 
-        if (hfResult) {
-          postSentiments = hfResult.postSentiments || [];
+        if (!analysisError && analysisData) {
+          postSentiments = analysisData.postSentiments || [];
           
           // Attach sentiment to each post by index (AI returns in same order as sent)
           postsForAnalysis.forEach((post: any, idx: number) => {
@@ -409,10 +420,11 @@ const Analysis = () => {
       
       // Save Reddit content to database
       try {
-        await saveRedditContentToDb(matchingPosts, [], 'keyword_analysis', postSentiments, []);
+        await saveRedditContentToDb(matchingPosts, [], 'keyword_analysis');
         console.log(`Keyword Analysis: Saved ${matchingPosts.length} Reddit posts for keyword "${keyword}"`);
       } catch (error: any) {
         console.error('Keyword Analysis: Failed to save Reddit content:', error);
+        // Don't block the UI, just log the error
       }
       
       // Save to investigation context
@@ -514,13 +526,15 @@ const Analysis = () => {
       let postSentiments: SentimentItem[] = [];
       
       try {
-        const hfResult = await analyzeWithHuggingFace(
-          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          []
-        );
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
+          body: {
+            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+            comments: []
+          }
+        });
 
-        if (hfResult) {
-          postSentiments = hfResult.postSentiments || [];
+        if (!analysisError && analysisData) {
+          postSentiments = analysisData.postSentiments || [];
           
           // Attach sentiment to each post by index
           postsForAnalysis.forEach((post: any, idx: number) => {
@@ -784,12 +798,14 @@ const Analysis = () => {
       let postSentiments: any[] = [];
       let commentSentiments: any[] = [];
       try {
-        const hfResult = await analyzeWithHuggingFace(
-          posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
-        );
-        if (hfResult) {
-          postSentiments = (hfResult.postSentiments || []).map((s: any, i: number) => ({
+        const { data: analysisData } = await supabase.functions.invoke('analyze-content', {
+          body: {
+            posts: posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+            comments: comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
+          }
+        });
+        if (analysisData) {
+          postSentiments = (analysisData.postSentiments || []).map((s: any, i: number) => ({
             ...s,
             subreddit: posts[i]?.subreddit || '',
             created_utc: posts[i]?.created_utc || 0,
@@ -797,7 +813,7 @@ const Analysis = () => {
             permalink: posts[i]?.permalink || '',
             body: posts[i]?.selftext || ''
           }));
-          commentSentiments = (hfResult.commentSentiments || []).map((s: any, i: number) => ({
+          commentSentiments = (analysisData.commentSentiments || []).map((s: any, i: number) => ({
             ...s,
             subreddit: comments[i]?.subreddit || '',
             created_utc: comments[i]?.created_utc || 0,
@@ -1397,156 +1413,104 @@ const Analysis = () => {
                                           </div>
                                         )}
                                         
-                                        {/* Deep Analysis Button */}
-                                        <div className="mt-3">
-                                          <Button
-                                            onClick={() => fetchDeepAnalysis(index, `${post.title} ${post.selftext || ''}`)}
-                                            disabled={loadingDeepAnalysis[index]}
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full"
-                                          >
-                                            {loadingDeepAnalysis[index] ? (
-                                              <>
-                                                <Brain className="mr-2 h-4 w-4 animate-spin" />
-                                                Analyzing...
-                                              </>
-                                            ) : deepAnalysisData[index] ? (
-                                              <>
-                                                <Eye className="mr-2 h-4 w-4" />
-                                                View Analysis
-                                              </>
-                                            ) : (
-                                              <>
-                                                <Brain className="mr-2 h-4 w-4" />
-                                                xAI Deep Analysis
-                                              </>
-                                            )}
-                                          </Button>
-                                        </div>
-                                        
                                         {/* xAI Deep Analysis Section */}
                                           <div className="mt-3">
-                                            <div className="border border-blue-200 rounded-lg overflow-hidden bg-white">
-                                              {/* xAI Header */}
-                                              <div className="flex items-center justify-between px-3 py-2 bg-blue-50/50 border-b border-blue-100">
-                                                <div className="flex items-center gap-2">
-                                                  <Activity className="h-4 w-4 text-blue-600" />
-                                                  <span className="text-sm font-semibold text-foreground">xAI Deep Analysis</span>
-                                                </div>
-                                                <Badge 
-                                                  variant={post._sentiment === 'positive' ? 'default' : post._sentiment === 'negative' ? 'destructive' : 'secondary'}
-                                                  className="text-xs capitalize"
-                                                >
-                                                  {post._sentiment || 'Not analyzed'}
-                                                </Badge>
+                                            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                                              {/* Header */}
+                                              <div className="px-3 py-2 border-b border-gray-100">
+                                                <div className="text-xs font-semibold text-gray-900">Sentiment analysis</div>
                                               </div>
                                               
                                               {/* Analysis Content */}
-                                              <div className="p-3">
-                                                <p className="text-sm text-foreground leading-relaxed">
-                                                  {deepAnalysisData[index]?.reasoning || explanation?.reasoning || explanation?.explanation || 'Analysis completed'}
-                                                </p>
-                                                
-                                                {/* Detailed Evidence - Only show when expanded */}
-                                                {isExpanded && (
-                                                  <div className="mt-4 pt-3 border-t border-gray-100">
-                                                    {/* Normalize word_contributions: handle both array [{word, contribution}] and object {word: score} formats */}
-                                                    {(() => {
-                                                      // Use deep analysis data if available, otherwise fall back to regular explanation
-                                                      const deepWC = deepAnalysisData[index]?.word_contributions;
-                                                      const rawWC = deepWC?.length > 0 ? deepWC : explanation?.word_contributions;
-                                                      const normalizedWC: { word: string; contribution: number }[] = rawWC
-                                                        ? Array.isArray(rawWC)
-                                                          ? rawWC.map((t: any) => ({ word: t.word || '', contribution: t.contribution ?? t.score ?? t.weight ?? t.value ?? 0 }))
-                                                          : Object.entries(rawWC as Record<string, number>).map(([word, score]) => ({ word, contribution: score }))
-                                                        : [];
+                                              <div className="px-3 py-3 space-y-3">
+                                                {/* Sentiment Badge */}
+                                                <div className="flex items-center justify-between">
+                                                  <Badge 
+                                                    variant={post._sentiment === 'positive' ? 'default' : post._sentiment === 'negative' ? 'destructive' : 'secondary'}
+                                                    className="text-xs capitalize"
+                                                  >
+                                                    {post._sentiment || 'Not analyzed'}
+                                                  </Badge>
+                                                </div>
 
-                                                      // Get filtered tokens with contribution data for color coding
-                                                      const filteredTokens = normalizedWC.filter(t => Math.abs(t.contribution) >= 0.001);
-                                                      const wordTagList: string[] = deepAnalysisData[index]?.key_words || explanation?.key_words || filteredTokens.map(w => w.word);
+                                                {/* WORD SIGNALS Section - Only show when expanded */}
+                                                {isExpanded && (() => {
+                                                  // Use deep analysis data if available, otherwise fall back to regular explanation
+                                                  const deepWC = deepAnalysisData[index]?.word_contributions;
+                                                  const rawWC = deepWC?.length > 0 ? deepWC : explanation?.word_contributions;
+                                                  const normalizedWC: { word: string; contribution: number }[] = rawWC
+                                                    ? Array.isArray(rawWC)
+                                                      ? rawWC.map((t: any) => ({ word: t.word || '', contribution: t.contribution ?? t.score ?? t.weight ?? t.value ?? 0 }))
+                                                      : Object.entries(rawWC as Record<string, number>).map(([word, score]) => ({ word, contribution: score }))
+                                                    : [];
 
-                                                      // Helper to get chip color based on contribution
-                                                      const getChipColor = (token: { word: string; contribution: number }) => {
-                                                        const score = token.contribution;
-                                                        const isWeak = Math.abs(score) < 0.005;
-                                                        if (isWeak) return 'bg-gray-50 text-gray-600 border-gray-200';
-                                                        if (score > 0) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                                                        return 'bg-rose-50 text-rose-700 border-rose-200';
-                                                      };
+                                                  const filteredTokens = normalizedWC.filter(t => Math.abs(t.contribution) >= 0.001);
+                                                  const topTokens = filteredTokens.slice(0, 5);
+                                                  const maxContribution = topTokens.length > 0 
+                                                    ? Math.max(...topTokens.map(t => Math.abs(t.contribution)))
+                                                    : 1;
 
-                                                      return (
-                                                        <>
-                                                          {/* Word Tags - colored by contribution */}
-                                                          {wordTagList.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1.5 mb-4">
-                                                              {filteredTokens.slice(0, 8).map((token, i) => (
-                                                                <span
-                                                                  key={i}
-                                                                  className={`text-[10px] px-1.5 py-0.5 rounded border ${getChipColor(token)}`}
-                                                                >
-                                                                  {token.word}
-                                                                </span>
-                                                              ))}
-                                                            </div>
-                                                          )}
+                                                  const getBarColor = (contribution: number) => {
+                                                    if (contribution > 0) return 'bg-green-500';
+                                                    if (contribution < 0) return 'bg-red-500';
+                                                    return 'bg-gray-400';
+                                                  };
 
-                                                          {/* Word Contribution Evidence */}
-                                                          <div className="text-xs font-semibold text-gray-900 mb-2">Word Contribution Evidence</div>
-                                                          <div className="space-y-1">
-                                                            {normalizedWC.length > 0 ? (
-                                                              normalizedWC.slice(0, 8).map((token, i) => {
-                                                                const score = token.contribution;
-                                                                const supportsPrediction = score > 0;
-                                                                const opposesPrediction = score < 0;
-                                                                const isWeak = Math.abs(score) < 0.005;
-                                                                const maxScore = Math.max(...normalizedWC.map(t => Math.abs(t.contribution)));
-                                                                const barWidth = maxScore > 0 ? (Math.abs(score) / maxScore) * 100 : 0;
-                                                                
-                                                                return (
-                                                                  <div key={i} className="flex items-center gap-2 text-[10px]">
-                                                                    <span className="font-mono bg-gray-50 px-1 py-0.5 rounded border border-gray-200 min-w-[3rem] text-center">
-                                                                      {token.word}
-                                                                    </span>
-                                                                    <span className={`font-mono min-w-[2.5rem] text-right ${isWeak ? 'text-gray-500' : score > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                                      {score > 0 ? '+' : ''}{score.toFixed(3)}
-                                                                    </span>
-                                                                    <span className={`text-xs ${isWeak ? 'text-gray-500' : supportsPrediction ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                                      {isWeak ? 'Weak signal' : supportsPrediction ? 'Supports prediction' : 'Opposes prediction'}
-                                                                    </span>
-                                                                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                                      <div
-                                                                        className={`h-full transition-all duration-300 ${isWeak ? 'bg-gray-400' : supportsPrediction ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                                                                        style={{ width: `${Math.min(100, barWidth)}%` }}
-                                                                      />
-                                                                    </div>
+                                                  const getPullDirection = (contribution: number) => {
+                                                    if (contribution > 0) return 'pull positive';
+                                                    if (contribution < 0) return 'pull negative';
+                                                    return 'neutral';
+                                                  };
+
+                                                  const getPullColor = (contribution: number) => {
+                                                    if (contribution > 0) return 'text-green-600';
+                                                    if (contribution < 0) return 'text-red-600';
+                                                    return 'text-gray-500';
+                                                  };
+
+                                                  return (
+                                                    <>
+                                                      {topTokens.length > 0 && (
+                                                        <div>
+                                                          <div className="text-[10px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">WORD SIGNALS</div>
+                                                          <div className="space-y-2">
+                                                            {topTokens.map((token, i) => {
+                                                              const score = token.contribution;
+                                                              const barWidth = maxContribution > 0 ? (Math.abs(score) / maxContribution) * 100 : 0;
+                                                              
+                                                              return (
+                                                                <div key={i} className="flex items-center gap-2">
+                                                                  <span className="text-xs font-medium text-gray-700 w-16 truncate">{token.word}</span>
+                                                                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                                    <div
+                                                                      className={`h-full ${getBarColor(score)}`}
+                                                                      style={{ width: `${Math.min(100, barWidth)}%` }}
+                                                                    />
                                                                   </div>
-                                                                );
-                                                              })
-                                                            ) : loadingDeepAnalysis[index] ? (
-                                                              <div className="flex items-center gap-2 text-xs text-gray-500 py-2">
-                                                                <Loader2 className="h-3 w-3 animate-spin" />
-                                                                Loading word contributions...
-                                                              </div>
-                                                            ) : (
-                                                              <div className="text-xs text-gray-500 italic py-2">
-                                                                No detailed contribution data available
-                                                              </div>
-                                                            )}
+                                                                  <span className={`text-[10px] ${getPullColor(score)}`}>
+                                                                    {getPullDirection(score)}
+                                                                  </span>
+                                                                </div>
+                                                              );
+                                                            })}
                                                           </div>
-                                                        </>
-                                                      );
-                                                    })()}
-                                                  </div>
-                                                )}
+                                                        </div>
+                                                      )}
+
+                                                      {/* Informational Note */}
+                                                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                                                        This analysis identifies key words that influence the sentiment prediction.
+                                                      </p>
+                                                    </>
+                                                  );
+                                                })()}
                                                 
                                                 {/* Action Buttons */}
-                                                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-100">
-                                                  {/* Always show Show Detailed Evidence button if we have xAI analysis */}
+                                                <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
                                                   <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="h-8 text-xs gap-1.5"
+                                                    className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
                                                     disabled={loadingDeepAnalysis[index]}
                                                     onClick={() => {
                                                       const newExpanded = new Set(expandedEvidence);
@@ -1568,25 +1532,25 @@ const Analysis = () => {
                                                   >
                                                     {loadingDeepAnalysis[index] ? (
                                                       <>
-                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
                                                         Analyzing...
                                                       </>
                                                     ) : isExpanded ? (
                                                       <>
-                                                        <Eye className="h-3.5 w-3.5" />
+                                                        <Eye className="h-2.5 w-2.5" />
                                                         Hide Details
                                                       </>
                                                     ) : (
                                                       <>
-                                                        <BarChart3 className="h-3.5 w-3.5" />
-                                                        Show Detailed Evidence
+                                                        <BarChart3 className="h-2.5 w-2.5" />
+                                                        Show Details
                                                       </>
                                                     )}
                                                   </Button>
                                                   <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-8 text-xs text-muted-foreground"
+                                                    className="h-5 px-2 text-[10px] text-gray-600 hover:bg-gray-50"
                                                     onClick={() => setPreviewPost(post)}
                                                   >
                                                     Show Original

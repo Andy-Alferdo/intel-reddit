@@ -23,6 +23,7 @@ import Header from "./components/Header";
 import { AppSidebar } from "./components/AppSidebar";
 import { InvestigationProvider } from "./contexts/InvestigationContext";
 import { MonitoringProvider } from "./contexts/MonitoringContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from "@supabase/supabase-js";
@@ -82,12 +83,13 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <InvestigationProvider>
-        <MonitoringProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <ThemeProvider>
+        <InvestigationProvider>
+          <MonitoringProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
             <Routes>
               {/* Public routes */}
               <Route
@@ -138,6 +140,7 @@ const App = () => {
         </TooltipProvider>
         </MonitoringProvider>
       </InvestigationProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };

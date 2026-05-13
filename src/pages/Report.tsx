@@ -45,8 +45,8 @@ const Report = () => {
   });
   
   const [reportData, setReportData] = useState({
-    department: '',
-    dateGenerated: new Date().toISOString().split('T')[0],
+    dateGenerated: '',
+    timeGenerated: '',
     caseName: '',
     executiveSummary: '',
     findings: '',
@@ -63,14 +63,53 @@ const Report = () => {
     }
   }, [currentCase?.id]);
 
-  // Auto-populate case name and department from current case
+  // Sync caseNumber and investigator from currentCase
+  useEffect(() => {
+    if (currentCase) {
+      setCaseNumber(currentCase.case_number || (currentCase as any).name || '');
+      setInvestigator(currentCase.lead_investigator || '');
+    }
+  }, [currentCase, setCaseNumber, setInvestigator]);
+
+  // Auto-populate case name from current case and set time with PKT/UTC
   useEffect(() => {
     if (currentCase) {
       setReportData(prev => ({
         ...prev,
-        caseName: currentCase.case_name || '',
-        department: currentCase.department || ''
+        caseName: currentCase.case_name || (currentCase as any).description || ''
       }));
+
+      // Use start_date and start_time from case if available, otherwise fall back to created_at
+      const startDate = currentCase.start_date || (currentCase.created_at ? new Date(currentCase.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      const startTime = currentCase.start_time;
+      
+      if (startTime) {
+        // Use the stored start_time directly (already formatted with PKT/UTC)
+        setReportData(prev => ({
+          ...prev,
+          dateGenerated: startDate,
+          timeGenerated: startTime
+        }));
+      } else {
+        // Fall back to calculating from created_at
+        const caseCreatedAt = currentCase.created_at ? new Date(currentCase.created_at) : new Date();
+        const utcTime = caseCreatedAt.toUTCString().split(' ')[4];
+        const pktTime = new Date(caseCreatedAt.getTime() + (5 * 60 * 60 * 1000)).toUTCString().split(' ')[4];
+        
+        const formatTime = (timeStr: string) => {
+          const [hours, minutes] = timeStr.split(':');
+          const hour = parseInt(hours);
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+          return `${displayHour.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+        };
+        
+        setReportData(prev => ({
+          ...prev,
+          dateGenerated: startDate,
+          timeGenerated: `${formatTime(pktTime)} PKT | ${formatTime(utcTime)} UTC`
+        }));
+      }
     }
   }, [currentCase]);
 
@@ -118,8 +157,8 @@ const Report = () => {
         reportData: {
           caseNumber,
           investigator,
-          department: reportData.department,
           dateGenerated: reportData.dateGenerated,
+          timeGenerated: reportData.timeGenerated,
           caseName: reportData.caseName,
           executiveSummary: reportData.executiveSummary,
           findings: reportData.findings,
@@ -167,7 +206,7 @@ const Report = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Forensic Report Generator</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Reporting</h2>
         <p className="text-muted-foreground">Generate automated or customized investigation reports in PDF or HTML format</p>
       </div>
 
@@ -296,7 +335,7 @@ const Report = () => {
               <Label htmlFor="caseNumber">Case Number *</Label>
               <Input 
                 id="caseNumber" 
-                value={caseNumber} 
+                value={caseNumber || ''} 
                 readOnly 
                 className="bg-muted"
               />
@@ -315,11 +354,11 @@ const Report = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="department">Investigation Unit</Label>
+              <Label htmlFor="investigator">Investigator</Label>
               <Input 
-                id="department" 
-                name="department" 
-                value={reportData.department} 
+                id="investigator" 
+                name="investigator" 
+                value={investigator || ''} 
                 readOnly
                 className="bg-muted"
               />
@@ -331,6 +370,20 @@ const Report = () => {
                 name="dateGenerated" 
                 type="text" 
                 value={reportData.dateGenerated} 
+                readOnly 
+                className="bg-muted"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="timeGenerated">Time of Creation</Label>
+              <Input 
+                id="timeGenerated" 
+                name="timeGenerated" 
+                type="text" 
+                value={reportData.timeGenerated} 
                 readOnly 
                 className="bg-muted"
               />

@@ -99,6 +99,8 @@ const NewCase = () => {
         description: formData.description,
         leadInvestigator: formData.investigator,
         priority: 'medium',
+        startDate: formData.startDate,
+        startTime: formData.startTime,
       });
       
       if (newCase) {
@@ -111,15 +113,23 @@ const NewCase = () => {
           },
         });
 
-        // Store the newly created case in localStorage so Dashboard loads it
-        const selectedCase = {
-          id: newCase.id,
-          name: caseNumber,
-          description: formData.caseName,
-          status: 'active',
-          date: new Date().toLocaleDateString()
-        };
-        localStorage.setItem('selectedCase', JSON.stringify(selectedCase));
+        // createCase() in InvestigationContext already saved the full DB result to
+        // localStorage and set currentCase in context. We only enrich it here with
+        // fields the edge function may not return (start_time, lead_investigator)
+        // so Report.tsx always shows the exact case-creation timestamp/investigator.
+        try {
+          const currentStored = JSON.parse(localStorage.getItem('selectedCase') || '{}');
+          const enriched = {
+            ...currentStored,
+            lead_investigator: currentStored.lead_investigator || formData.investigator,
+            start_time: currentStored.start_time || formData.startTime,
+            start_date: currentStored.start_date || formData.startDate,
+          };
+          localStorage.setItem('selectedCase', JSON.stringify(enriched));
+        } catch {
+          // Leave localStorage as createCase() set it if parsing fails
+        }
+        // Notify other components (e.g. Dashboard) that the active case changed
         window.dispatchEvent(new Event('storage'));
 
         toast({

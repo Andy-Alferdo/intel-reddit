@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { getModelServerUrl } from '../config/api';
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvestigation } from "@/contexts/InvestigationContext";
@@ -24,8 +25,7 @@ import {
 } from "recharts";
 import { UserCommunityNetworkGraph } from "@/components/UserCommunityNetworkGraph";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { toZonedTime, format } from 'date-fns-tz';
-import { analyzeWithHuggingFace, SentimentItem as HFSentimentItem } from '@/integrations/huggingface/client';
+import { toZonedTime, format } from "date-fns-tz";
 
 type LinkAnalysisPayload = {
   primaryUser: string;
@@ -155,99 +155,84 @@ const PremiumExplanation = ({
       });
   };
 
-  const getChipColor = (token: any) => {
-    const score = token.contribution || token.score || token.weight || token.value || 0;
-    if (Math.abs(score) < 0.005) {
-      return 'bg-gray-50 text-gray-600 border-gray-200';
-    }
-    if (score > 0) {
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    } else {
-      return 'bg-rose-50 text-rose-700 border-rose-200';
+  const getSentimentColor = (sent: string) => {
+    switch (sent?.toLowerCase()) {
+      case 'positive':
+        return 'bg-green-100 text-green-700 border-green-300';
+      case 'negative':
+        return 'bg-red-100 text-red-700 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-300';
     }
   };
 
+  const getBarColor = (contribution: number) => {
+    if (contribution > 0) return 'bg-green-500';
+    if (contribution < 0) return 'bg-red-500';
+    return 'bg-gray-400';
+  };
+
+  const getPullDirection = (contribution: number) => {
+    if (contribution > 0) return 'pull positive';
+    if (contribution < 0) return 'pull negative';
+    return 'neutral';
+  };
+
+  const getPullColor = (contribution: number) => {
+    if (contribution > 0) return 'text-green-600';
+    if (contribution < 0) return 'text-red-600';
+    return 'text-gray-500';
+  };
+
   const filteredTokens = filterTokens(contributions);
-  const topTokens = filteredTokens.slice(0, isExpanded ? 8 : 3);
+  const topTokens = filteredTokens.slice(0, 5);
   const confidenceValue = confidence;
+  const maxContribution = topTokens.length > 0 
+    ? Math.max(...topTokens.map(t => Math.abs(t.contribution || t.score || t.weight || t.value || 0)))
+    : 1;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-      <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-blue-600" />
-            <span className="text-xs font-semibold text-gray-900">xAI Deep Analysis</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              sentiment === 'positive' ? 'bg-emerald-100 text-emerald-700' :
-              sentiment === 'negative' ? 'bg-rose-100 text-rose-700' :
-              'bg-gray-100 text-gray-700'
-            }`}>
-              {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
-            </span>
-            {confidenceValue !== null && confidenceValue !== undefined && (
-              <span className="text-xs text-gray-500">
-                {confidenceValue.toFixed(2)}
-              </span>
-            )}
-          </div>
-        </div>
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-gray-100">
+        <div className="text-xs font-semibold text-gray-900">Sentiment analysis</div>
       </div>
 
-      <div className="px-3 py-2">
-        <p className="text-xs text-gray-700 mb-2 leading-relaxed">
-          {getShortExplanation(sentiment)}
-        </p>
+      {/* Content */}
+      <div className="px-3 py-3 space-y-3">
+        {/* Sentiment Badge and Confidence */}
+        <div className="flex items-center justify-between">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded border ${getSentimentColor(sentiment)}`}>
+            {sentiment.charAt(0).toUpperCase() + sentiment.slice(1)}
+          </span>
+          {confidenceValue !== null && confidenceValue !== undefined && (
+            <span className="text-lg font-bold text-gray-900">
+              {Math.round(confidenceValue * 100)}%
+            </span>
+          )}
+        </div>
 
+        {/* WORD SIGNALS Section */}
         {topTokens.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {topTokens.map((token, i) => (
-              <span
-                key={i}
-                className={`text-[10px] px-1.5 py-0.5 rounded border ${getChipColor(token)}`}
-              >
-                {token.word}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {isExpanded && filteredTokens.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="text-xs font-semibold text-gray-900 mb-2">Word Contribution Evidence</div>
-            <div className="space-y-1">
-              {filteredTokens.slice(0, 8).map((token, i) => {
+          <div>
+            <div className="text-[10px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">WORD SIGNALS</div>
+            <div className="space-y-2">
+              {topTokens.map((token, i) => {
                 const score = token.contribution || token.score || token.weight || token.value || 0;
-                const supportsPrediction = score > 0;
-                const isWeak = Math.abs(score) < 0.005;
-                const maxScore = Math.max(...filteredTokens.map(t => Math.abs(t.contribution || t.score || t.weight || t.value || 0)));
-                const barWidth = maxScore > 0 ? (Math.abs(score) / maxScore) * 100 : 0;
+                const barWidth = maxContribution > 0 ? (Math.abs(score) / maxContribution) * 100 : 0;
                 
                 return (
-                  <div key={i} className="flex items-center gap-2 text-[10px]">
-                    <span className="font-mono bg-gray-50 px-1 py-0.5 rounded border border-gray-200 min-w-[3rem] text-center">
-                      {token.word}
-                    </span>
-                    <span className={`font-mono min-w-[2.5rem] text-right ${
-                      isWeak ? 'text-gray-500' : score > 0 ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
-                      {score > 0 ? '+' : ''}{score.toFixed(3)}
-                    </span>
-                    <span className={`text-xs ${
-                      isWeak ? 'text-gray-500' : supportsPrediction ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
-                      {isWeak ? 'Weak signal' : supportsPrediction ? 'Supports prediction' : 'Opposes prediction'}
-                    </span>
-                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-700 w-16 truncate">{token.word}</span>
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-300 ${
-                          isWeak ? 'bg-gray-400' : supportsPrediction ? 'bg-emerald-500' : 'bg-rose-500'
-                        }`}
+                        className={`h-full ${getBarColor(score)}`}
                         style={{ width: `${Math.min(100, barWidth)}%` }}
                       />
                     </div>
+                    <span className={`text-[10px] ${getPullColor(score)}`}>
+                      {getPullDirection(score)}
+                    </span>
                   </div>
                 );
               })}
@@ -255,11 +240,17 @@ const PremiumExplanation = ({
           </div>
         )}
 
-        <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
+        {/* Informational Note */}
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          This analysis identifies key words that influence the sentiment prediction.
+        </p>
+
+        {/* Buttons */}
+        <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
           <Button
             size="sm"
             variant="outline"
-            className="h-6 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
+            className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
               onToggleExpand();
@@ -268,25 +259,25 @@ const PremiumExplanation = ({
           >
             {isAnalyzing ? (
               <>
-                <Zap className="h-3 w-3 mr-1 animate-pulse" />
+                <Zap className="h-2.5 w-2.5 mr-1 animate-pulse" />
                 Analyzing...
               </>
             ) : isExpanded ? (
               <>
-                <Eye className="h-3 w-3 mr-1" />
+                <Eye className="h-2.5 w-2.5 mr-1" />
                 Hide Details
               </>
             ) : (
               <>
-                <BarChart3 className="h-3 w-3 mr-1" />
-                Show Detailed Evidence
+                <BarChart3 className="h-2.5 w-2.5 mr-1" />
+                Show Details
               </>
             )}
           </Button>
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 px-2 text-[10px] text-gray-600 hover:bg-gray-50"
+            className="h-5 px-2 text-[10px] text-gray-600 hover:bg-gray-50"
             onClick={(e) => {
               e.stopPropagation();
               onShowOriginal();
@@ -344,8 +335,15 @@ const LinkAnalysis = () => {
     setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { isAnalyzing: true, result: null, showDeep: false })));
 
     try {
-      const { analyzeDeep } = await import('@/integrations/huggingface/client');
-      const result = await analyzeDeep(text);
+      const response = await fetch(getModelServerUrl('/deep-analysis'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) throw new Error(`Deep analysis failed: ${response.statusText}`);
+
+      const result = await response.json();
       
       setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
         isAnalyzing: false, 
@@ -445,10 +443,12 @@ const LinkAnalysis = () => {
       let postSentiments: any[] = [];
       let commentSentiments: any[] = [];
       try {
-        const analysisData = await analyzeWithHuggingFace(
-          posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
-        );
+        const { data: analysisData } = await supabase.functions.invoke('analyze-content', {
+          body: {
+            posts: posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+            comments: comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
+          }
+        });
         if (analysisData) {
           postSentiments = (analysisData.postSentiments || []).map((s: any, i: number) => ({
             ...s,

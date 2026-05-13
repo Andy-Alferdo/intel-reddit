@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RankedProgressBarCard } from './RankedProgressBarCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   Search, X, ExternalLink, Clock, TrendingUp, Users, BarChart3,
   MessageSquare, Brain, Activity, Hash, ArrowLeft, Target, Filter,
-  Sparkles, Eye, MoreVertical, UserPlus
+  Sparkles, Eye, Monitor, MoreVertical, User
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip,
@@ -22,7 +21,10 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
-import { analyzeWithHuggingFace, SentimentItem as HFSentimentItem } from '@/integrations/huggingface/client';
+import { useMonitoring } from '@/contexts/MonitoringContext';
+import { useNavigate } from 'react-router-dom';
+import { getModelServerUrl } from '../../config/api';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface SentimentItem {
   text: string;
@@ -76,7 +78,7 @@ const sentimentTone = (s?: string) => {
 
 const SENT_COLORS = { positive: '#10b981', neutral: '#94a3b8', negative: '#ef4444' };
 
-// xAI Deep Analysis Panel Component - matching User Profiling
+// xAI Deep Analysis Panel Component - matching new design
 const XAIDeepAnalysis = ({ 
   sentiment, 
   explanation, 
@@ -128,21 +130,41 @@ const XAIDeepAnalysis = ({
       });
   };
 
-  // Get chip color based on contribution sign
-  const getChipColor = (token: any) => {
-    const score = token.contribution || token.score || token.weight || token.value || 0;
-    if (Math.abs(score) < 0.005) {
-      return 'bg-gray-50 text-gray-600 border-gray-200';
+  const getSentimentColor = (sent: string) => {
+    switch (sent?.toLowerCase()) {
+      case 'positive':
+        return 'bg-green-100 text-green-700 border-green-300';
+      case 'negative':
+        return 'bg-red-100 text-red-700 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-700 border-gray-300';
     }
-    if (score > 0) {
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    }
-    return 'bg-rose-50 text-rose-700 border-rose-200';
+  };
+
+  const getBarColor = (contribution: number) => {
+    if (contribution > 0) return 'bg-green-500';
+    if (contribution < 0) return 'bg-red-500';
+    return 'bg-gray-400';
+  };
+
+  const getPullDirection = (contribution: number) => {
+    if (contribution > 0) return 'pull positive';
+    if (contribution < 0) return 'pull negative';
+    return 'neutral';
+  };
+
+  const getPullColor = (contribution: number) => {
+    if (contribution > 0) return 'text-green-600';
+    if (contribution < 0) return 'text-red-600';
+    return 'text-gray-500';
   };
 
   const filteredTokens = filterTokens(contributions);
-  const topTokens = filteredTokens.slice(0, isExpanded ? 8 : 4);
+  const topTokens = filteredTokens.slice(0, 5);
   const displaySentiment = sentiment || 'neutral';
+  const maxContribution = topTokens.length > 0 
+    ? Math.max(...topTokens.map(t => Math.abs(t.contribution || t.score || t.weight || t.value || 0)))
+    : 1;
 
   // Loading state
   if (isAnalyzing) {
@@ -161,80 +183,40 @@ const XAIDeepAnalysis = ({
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden mt-2">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-blue-600" />
-            <span className="text-xs font-semibold text-slate-900">xAI Deep Analysis</span>
-          </div>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-            displaySentiment === 'positive' ? 'bg-emerald-100 text-emerald-700' :
-            displaySentiment === 'negative' ? 'bg-rose-100 text-rose-700' :
-            'bg-slate-100 text-slate-700'
-          }`}>
-            {displaySentiment.charAt(0).toUpperCase() + displaySentiment.slice(1)}
-          </span>
-        </div>
+      <div className="px-3 py-2 border-b border-slate-100">
+        <div className="text-xs font-semibold text-slate-900">Sentiment analysis</div>
       </div>
 
       {/* Content */}
-      <div className="px-3 py-2">
-        {/* Short explanation */}
-        <p className="text-xs text-slate-700 mb-2 leading-relaxed">
-          {typeof explanation === 'string' 
-            ? explanation 
-            : explanation?.reasoning || getShortExplanation(displaySentiment)}
-        </p>
+      <div className="px-3 py-3 space-y-3">
+        {/* Sentiment Badge and Confidence */}
+        <div className="flex items-center justify-between">
+          <span className={`text-xs font-medium px-2 py-0.5 rounded border ${getSentimentColor(displaySentiment)}`}>
+            {displaySentiment.charAt(0).toUpperCase() + displaySentiment.slice(1)}
+          </span>
+        </div>
 
-        {/* Top indicators */}
+        {/* WORD SIGNALS Section */}
         {topTokens.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {topTokens.map((token, i) => (
-              <span
-                key={i}
-                className={`text-[10px] px-1.5 py-0.5 rounded border ${getChipColor(token)}`}
-              >
-                {token.word}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Expanded evidence */}
-        {isExpanded && filteredTokens.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-100">
-            <div className="text-xs font-semibold text-slate-900 mb-2">Word Contribution Evidence</div>
-            <div className="space-y-1">
-              {filteredTokens.slice(0, 8).map((token, i) => {
+          <div>
+            <div className="text-[10px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">WORD SIGNALS</div>
+            <div className="space-y-2">
+              {topTokens.map((token, i) => {
                 const score = token.contribution || token.score || token.weight || token.value || 0;
-                const supportsPrediction = score > 0;
-                const isWeak = Math.abs(score) < 0.005;
-                const maxScore = Math.max(...filteredTokens.map(t => Math.abs(t.contribution || t.score || t.weight || t.value || 0)));
-                const barWidth = maxScore > 0 ? (Math.abs(score) / maxScore) * 100 : 0;
+                const barWidth = maxContribution > 0 ? (Math.abs(score) / maxContribution) * 100 : 0;
                 
                 return (
-                  <div key={i} className="flex items-center gap-2 text-[10px]">
-                    <span className="font-mono bg-slate-50 px-1 py-0.5 rounded border border-slate-200 min-w-[3rem] text-center">
-                      {token.word}
-                    </span>
-                    <span className={`font-mono min-w-[2.5rem] text-right ${
-                      isWeak ? 'text-slate-500' : score > 0 ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
-                      {score > 0 ? '+' : ''}{score.toFixed(3)}
-                    </span>
-                    <span className={`text-xs ${
-                      isWeak ? 'text-slate-500' : supportsPrediction ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
-                      {isWeak ? 'Weak signal' : supportsPrediction ? 'Supports prediction' : 'Opposes prediction'}
-                    </span>
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-700 w-16 truncate">{token.word}</span>
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-300 ${
-                          isWeak ? 'bg-slate-400' : supportsPrediction ? 'bg-emerald-500' : 'bg-rose-500'
-                        }`}
+                        className={`h-full ${getBarColor(score)}`}
                         style={{ width: `${Math.min(100, barWidth)}%` }}
                       />
                     </div>
+                    <span className={`text-[10px] ${getPullColor(score)}`}>
+                      {getPullDirection(score)}
+                    </span>
                   </div>
                 );
               })}
@@ -242,24 +224,27 @@ const XAIDeepAnalysis = ({
           </div>
         )}
 
-        {/* Buttons */}
-        <div className="flex items-center gap-2 mt-3 pt-2 border-t border-slate-100">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-6 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleExpand();
-            }}
-          >
-            {isExpanded ? (
-              <><Eye className="h-3 w-3 mr-1" /> Hide Details</>
-            ) : (
-              <><Brain className="h-3 w-3 mr-1" /> Show Details</>
-            )}
-          </Button>
-        </div>
+        {/* Informational Note */}
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          This analysis identifies key words that influence the sentiment prediction.
+        </p>
+
+        {/* Toggle Button */}
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleExpand();
+          }}
+        >
+          {isExpanded ? (
+            <><Eye className="h-2.5 w-2.5 mr-1" /> Hide Details</>
+          ) : (
+            <><Brain className="h-2.5 w-2.5 mr-1" /> Show Details</>
+          )}
+        </Button>
       </div>
     </div>
   );
@@ -282,18 +267,6 @@ const PostCard = ({
   // Get contributions from deep analysis result
   const getContributions = () => {
     if (deepAnalysisState?.showDeep && deepAnalysisState.result) {
-      const wordImportance = deepAnalysisState.result.word_importance;
-      if (wordImportance && Array.isArray(wordImportance)) {
-        // Map backend format to frontend expected format
-        return wordImportance.map(item => ({
-          word: item.word,
-          contribution: item.importance,  // Map importance to contribution
-          score: item.importance,
-          weight: item.importance,
-          value: item.importance,
-          sentiment_contribution: item.sentiment_contribution
-        }));
-      }
       return deepAnalysisState.result.deep_explanation?.word_contributions || 
              deepAnalysisState.result.shap_explanation?.word_contributions ||
              deepAnalysisState.result.word_contributions || [];
@@ -465,20 +438,21 @@ interface KeywordAnalysisDashboardProps {
 }
 
 const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => {
-  const navigate = useNavigate();
   const [keyword, setKeyword] = useState('');
   const [keywordData, setKeywordData] = useState<KeywordData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [targetProgress, setTargetProgress] = useState(0);
   const [selectedFilter, setSelectedFilter] = useState<'recent' | 'top'>('recent');
-  const [activeSentiment, setActiveSentiment] = useState<'positive' | 'neutral' | 'negative' | null>(null);
+  const [activeSentiment, setActiveSentiment] = useState<'positive' | 'neutral' | 'negative' | 'all' | null>('all');
   const [savedKeywords, setSavedKeywords] = useState<any[]>([]);
   // Per-post deep analysis state - matching User Profiling
   const [deepAnalysisStates, setDeepAnalysisStates] = useState<Map<string, { isAnalyzing: boolean; result: any; showDeep: boolean }>>(new Map());
   const { toast } = useToast();
   const { addKeywordAnalysis, saveKeywordAnalysisToDb, saveRedditContentToDb, currentCase } = useInvestigation();
+  const { targets } = useMonitoring();
+  const navigate = useNavigate();
 
-  // Request deep analysis for a post - using Gradio client
+  // Request deep analysis for a post - matching User Profiling
   const handleDeepAnalysis = useCallback(async (text: string, postId: string) => {
     // Set analyzing state
     setDeepAnalysisStates(prev => new Map(prev.set(postId, { 
@@ -488,8 +462,17 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
     })));
 
     try {
-      const { analyzeDeep } = await import('@/integrations/huggingface/client');
-      const result = await analyzeDeep(text);
+      const response = await fetch(getModelServerUrl('/deep-analysis'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Deep analysis failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
       
       // Update state with result
       setDeepAnalysisStates(prev => new Map(prev.set(postId, { 
@@ -544,7 +527,18 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
         .eq('case_id', currentCase.id)
         .eq('analysis_type', 'keyword')
         .order('analyzed_at', { ascending: false });
-      if (data) setSavedKeywords(data);
+      
+      if (data) {
+        // Deduplicate by target field (keyword name), keeping only the most recent analysis
+        const uniqueKeywords = new Map();
+        data.forEach(item => {
+          const keyword = item.target?.toLowerCase().trim();
+          if (keyword && !uniqueKeywords.has(keyword)) {
+            uniqueKeywords.set(keyword, item);
+          }
+        });
+        setSavedKeywords(Array.from(uniqueKeywords.values()));
+      }
     } catch (err) {
       console.error('Failed to fetch saved keywords:', err);
     }
@@ -583,8 +577,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
     let posts = selectedFilter === 'top' ? keywordData.top20Posts : keywordData.recent20Posts;
     if (!posts) posts = [];
 
-    // Apply sentiment filter if active
-    if (activeSentiment) {
+    // Apply sentiment filter if active (and not 'all')
+    if (activeSentiment && activeSentiment !== 'all') {
       posts = posts.filter((post: Post) => post._sentiment === activeSentiment);
     }
 
@@ -673,8 +667,59 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
   }, [filteredPosts]);
 
   // Handle sentiment filter click
-  const handleSentimentClick = (sentiment: 'positive' | 'neutral' | 'negative') => {
-    setActiveSentiment(activeSentiment === sentiment ? null : sentiment);
+  const handleSentimentClick = (sentiment: 'positive' | 'neutral' | 'negative' | 'all') => {
+    setActiveSentiment(activeSentiment === sentiment ? 'all' : sentiment);
+  };
+
+  // Check if user is already being monitored
+  const isUserMonitored = (username: string) => {
+    const cleanUsername = username.replace(/^u\//, '');
+    return targets.some(target => 
+      target.type === 'user' && 
+      target.name.replace(/^u\//, '').toLowerCase() === cleanUsername.toLowerCase()
+    );
+  };
+
+  // Handle "Add to Monitoring" action
+  const handleAddToMonitoring = (username: string) => {
+    const cleanUsername = username.replace(/^u\//, '');
+    
+    if (isUserMonitored(username)) {
+      // Find existing target and navigate to it
+      const existingTarget = targets.find(target => 
+        target.type === 'user' && 
+        target.name.replace(/^u\//, '').toLowerCase() === cleanUsername.toLowerCase()
+      );
+      
+      if (existingTarget) {
+        navigate('/monitoring', { 
+          state: { 
+            prefillUser: cleanUsername,
+            selectTargetId: existingTarget.id 
+          } 
+        });
+        toast({
+          title: "User already monitored",
+          description: `${username} is already being monitored. Navigating to existing card.`,
+        });
+      }
+    } else {
+      // Navigate to monitoring with prefill
+      navigate('/monitoring', { 
+        state: { prefillUser: cleanUsername } 
+      });
+    }
+  };
+
+  // Handle "Add to User Profiling" action
+  const handleAddToUserProfiling = (username: string) => {
+    const cleanUsername = username.replace(/^u\//, '');
+    
+    // Check if user is already profiled by checking the investigation context
+    // Note: We'll use a simpler approach and let UserProfiling handle the existence check
+    navigate('/user-profiling', { 
+      state: { prefillUsername: cleanUsername } 
+    });
   };
 
   // Handle keyword analysis
@@ -776,12 +821,14 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       let postSentiments: SentimentItem[] = [];
 
       try {
-        const analysisData = await analyzeWithHuggingFace(
-          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          []
-        );
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
+          body: {
+            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+            comments: []
+          }
+        });
 
-        if (analysisData) {
+        if (!analysisError && analysisData) {
           postSentiments = analysisData.postSentiments || [];
 
           // Attach sentiment to each post by index
@@ -838,7 +885,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
 
       // Save Reddit content to database
       try {
-        await saveRedditContentToDb(posts, [], 'keyword_analysis', postSentiments, []);
+        await saveRedditContentToDb(posts, [], 'keyword_analysis');
         console.log(`Keyword Analysis: Saved ${posts.length} Reddit posts for keyword "${keyword}"`);
       } catch (error: any) {
         console.error('Keyword Analysis: Failed to save Reddit content:', error);
@@ -1002,16 +1049,6 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                         </SelectContent>
                       </Select>
 
-                      {/* Sentiment Filter Badge */}
-                      {activeSentiment && (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] cursor-pointer ${sentimentTone(activeSentiment)}`}
-                          onClick={() => setActiveSentiment(null)}
-                        >
-                          {activeSentiment} ×
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -1035,12 +1072,12 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                         <div className="text-center text-sm text-slate-400 py-12 border border-dashed border-slate-200 rounded-lg">
                           <MessageSquare className="h-8 w-8 mx-auto mb-2 text-slate-300" />
                           <p>No posts match the current filters</p>
-                          {activeSentiment && (
+                          {activeSentiment && activeSentiment !== 'all' && (
                             <Button
                               variant="outline"
                               size="sm"
                               className="mt-3"
-                              onClick={() => setActiveSentiment(null)}
+                              onClick={() => setActiveSentiment('all')}
                             >
                               Clear Sentiment Filter
                             </Button>
@@ -1056,153 +1093,97 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
             {/* === RIGHT SIDEBAR (30%) === */}
             <div className="lg:col-span-3 space-y-5">
               {/* Top Subreddits Card */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-2.5 border-b border-slate-100">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <BarChart3 className="h-4 w-4 text-blue-600" /> Top Subreddits
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  {topSubredditsData.length > 0 ? (
-                    <div className="space-y-1.5">
-                      {topSubredditsData.slice(0, 5).map((sub, index) => {
-                        const cleanSubreddit = sub.name.replace(/^r\//, '');
-                        return (
-                          <div key={index} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                              <span className="text-slate-600">{sub.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-slate-900">{sub.mentions}</span>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <MoreVertical className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate('/monitoring', { state: { prefillCommunity: cleanSubreddit } })}>
-                                    <Eye className="h-3 w-3 mr-2" />
-                                    Add to Monitoring
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => navigate('/analysis', { state: { prefillCommunity: cleanSubreddit, activeTab: 'community', viewOnly: true } })}>
-                                    <Users className="h-3 w-3 mr-2" />
-                                    Add to Community Analysis
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="h-32 flex items-center justify-center text-slate-400">
-                      <span className="text-xs">No subreddit data available</span>
-                    </div>
-                  )}
-                                  </CardContent>
-              </Card>
+              <RankedProgressBarCard data={topSubredditsData} />
 
               {/* Sentiment Analysis Card */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader className="pb-2.5 border-b border-slate-100">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Activity className="h-4 w-4 text-blue-600" /> Sentiment Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="h-40">
-                    {sentimentData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={sentimentData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={35}
-                            outerRadius={60}
-                            paddingAngle={2}
-                            dataKey="value"
-                          >
-                            <Cell
-                              fill={SENT_COLORS.positive}
-                              cursor="pointer"
-                              onClick={() => handleSentimentClick('positive')}
-                              stroke={activeSentiment === 'positive' ? '#10b981' : 'transparent'}
-                              strokeWidth={activeSentiment === 'positive' ? 3 : 0}
-                            />
-                            <Cell
-                              fill={SENT_COLORS.neutral}
-                              cursor="pointer"
-                              onClick={() => handleSentimentClick('neutral')}
-                              stroke={activeSentiment === 'neutral' ? '#94a3b8' : 'transparent'}
-                              strokeWidth={activeSentiment === 'neutral' ? 3 : 0}
-                            />
-                            <Cell
-                              fill={SENT_COLORS.negative}
-                              cursor="pointer"
-                              onClick={() => handleSentimentClick('negative')}
-                              stroke={activeSentiment === 'negative' ? '#ef4444' : 'transparent'}
-                              strokeWidth={activeSentiment === 'negative' ? 3 : 0}
-                            />
-                          </Pie>
-                          <RTooltip
-                            contentStyle={{
-                              backgroundColor: 'white',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px',
-                              fontSize: '11px'
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-slate-400">
-                        <BarChart3 className="h-6 w-6" />
-                        <span className="ml-2 text-xs">No sentiment data</span>
+              <Card className="border-primary/20 border-forensic-accent/30 shadow-[0_0_20px_rgba(0,255,198,0.15)]">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Activity className="h-4 w-4 text-forensic-accent" />
+                      Sentiment Distribution
+                    </CardTitle>
+                    {activeSentiment && activeSentiment !== 'all' && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">Filtering by:</span>
+                        <span className={activeSentiment === 'positive' ? 'text-green-600 font-medium' : activeSentiment === 'negative' ? 'text-red-600 font-medium' : 'text-gray-600 font-medium'}>
+                          {activeSentiment.charAt(0).toUpperCase() + activeSentiment.slice(1)}
+                        </span>
+                        <button 
+                          onClick={() => handleSentimentClick('all')}
+                          className="text-blue-500 hover:text-blue-700 underline ml-1"
+                        >
+                          Clear
+                        </button>
                       </div>
                     )}
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Donut Chart */}
+                    <div className="h-44">
+                      {sentimentData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={sentimentData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={45}
+                              outerRadius={70}
+                              dataKey="value"
+                              strokeWidth={3}
+                              stroke="#fff"
+                            >
+                              {sentimentData.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={entry.color || SENT_COLORS[entry.name.toLowerCase() as keyof typeof SENT_COLORS]} 
+                                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => handleSentimentClick(activeSentiment === entry.name.toLowerCase() ? 'all' : entry.name.toLowerCase() as any)}
+                                />
+                              ))}
+                            </Pie>
+                            <RTooltip
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                fontSize: '11px'
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-slate-400">
+                          <BarChart3 className="h-6 w-6" />
+                          <span className="ml-2 text-xs">No sentiment data</span>
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Legend with click handlers */}
-                  <div className="mt-3 space-y-1.5">
-                    <div
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                        activeSentiment === 'positive' ? 'bg-green-50' : 'hover:bg-slate-50'
-                      }`}
-                      onClick={() => handleSentimentClick('positive')}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: SENT_COLORS.positive }}></div>
-                        <span className="text-xs text-slate-600">Positive</span>
-                      </div>
-                      <span className="text-sm font-medium text-slate-900">{getSentimentPercentage('positive')}%</span>
+                    {/* POSTS Label */}
+                    <div className="text-center text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                      POSTS
                     </div>
-                    <div
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                        activeSentiment === 'neutral' ? 'bg-slate-100' : 'hover:bg-slate-50'
-                      }`}
-                      onClick={() => handleSentimentClick('neutral')}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: SENT_COLORS.neutral }}></div>
-                        <span className="text-xs text-slate-600">Neutral</span>
-                      </div>
-                      <span className="text-sm font-medium text-slate-900">{getSentimentPercentage('neutral')}%</span>
+
+                    {/* Clickable Legend */}
+                    <div className="flex items-center justify-center gap-4 text-xs">
+                      {sentimentData.map((item) => (
+                        <button
+                          key={item.name}
+                          onClick={() => handleSentimentClick(activeSentiment === item.name.toLowerCase() ? 'all' : item.name.toLowerCase() as any)}
+                          className={`flex items-center gap-1.5 transition-opacity ${activeSentiment !== 'all' && activeSentiment !== item.name.toLowerCase() ? 'opacity-40' : 'hover:opacity-80'}`}
+                        >
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color || SENT_COLORS[item.name.toLowerCase() as keyof typeof SENT_COLORS] }}></div>
+                          <span style={{ color: item.color || SENT_COLORS[item.name.toLowerCase() as keyof typeof SENT_COLORS] }}>{item.name}</span>
+                        </button>
+                      ))}
                     </div>
-                    <div
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
-                        activeSentiment === 'negative' ? 'bg-red-50' : 'hover:bg-slate-50'
-                      }`}
-                      onClick={() => handleSentimentClick('negative')}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: SENT_COLORS.negative }}></div>
-                        <span className="text-xs text-slate-600">Negative</span>
-                      </div>
-                      <span className="text-sm font-medium text-slate-900">{getSentimentPercentage('negative')}%</span>
+
+                    <div className="text-center text-xs text-muted-foreground mt-1">
+                      Click a color to filter feed
                     </div>
                   </div>
                 </CardContent>
@@ -1268,50 +1249,72 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
               <CardContent className="p-4">
                 {topUsers.length > 0 ? (
                   <div className="space-y-3">
-                    {topUsers.map((user, index) => {
-                      const cleanUsername = user.username.replace(/^u\//, '');
-                      return (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600">
-                              {index + 1}
-                            </div>
-                            <span className="text-sm font-medium text-slate-900">{user.username}</span>
+                    {topUsers.map((user, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600 flex-shrink-0">
+                            {index + 1}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-blue-500 rounded-full"
-                                style={{ width: `${(user.count / topUsers[0].count) * 100}%` }}
-                              />
-                            </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {user.count}
-                            </Badge>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate('/monitoring', { state: { prefillUser: cleanUsername } })}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Add to Monitoring
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate('/user-profiling', { state: { prefillUsername: cleanUsername } })}>
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Add to User Profiling
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                          <a
+                            href={`https://www.reddit.com/user/${user.username.replace(/^u\//, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors truncate"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {user.username}
+                          </a>
                         </div>
-                      );
-                    })}
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 rounded-full"
+                              style={{ width: `${(user.count / topUsers[0].count) * 100}%` }}
+                            />
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {user.count}
+                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToMonitoring(user.username);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Monitor className="h-4 w-4 mr-2" />
+                                Add to Monitoring
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToUserProfiling(user.username);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <User className="h-4 w-4 mr-2" />
+                                Add to User Profiling
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="h-32 flex items-center justify-center text-slate-400">

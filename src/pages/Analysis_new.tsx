@@ -20,7 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
-import { analyzeWithHuggingFace, SentimentItem as HFSentimentItem } from '@/integrations/huggingface/client';
 
 interface SentimentItem {
   text: string;
@@ -517,12 +516,14 @@ const Analysis = () => {
       const postsForAnalysis = [...recent20Pre, ...uniqueTop];
       
       try {
-        const analysisData = await analyzeWithHuggingFace(
-          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          []
-        );
+        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
+          body: {
+            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+            comments: []
+          }
+        });
 
-        if (analysisData) {
+        if (!analysisError && analysisData) {
           // Handle both old and new AI response structures
           if (analysisData.postSentiments && Array.isArray(analysisData.postSentiments)) {
             // Old structure: array of sentiment objects
