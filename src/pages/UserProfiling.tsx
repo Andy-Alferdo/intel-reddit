@@ -831,7 +831,8 @@ const UserProfiling = () => {
     setTargetProgress(0);
 
     try {
-      console.log('Fetching Reddit data for user:', cleanUsername);
+      const perfStart = performance.now();
+      console.log(`[Perf] Starting analysis for user: ${cleanUsername}`);
       setTargetProgress(30);
 
       // Fetch user data from Reddit
@@ -856,7 +857,8 @@ const UserProfiling = () => {
         return;
       }
 
-      console.log('Reddit data fetched successfully');
+      const perfReddit = performance.now();
+      console.log(`[Perf] Reddit data fetched successfully in ${(perfReddit - perfStart).toFixed(2)}ms`);
       setTargetProgress(60);
 
       // ── HF Sentiment Analysis (runs in background) ──────────────
@@ -866,13 +868,16 @@ const UserProfiling = () => {
       try {
         const postsToAnalyze = (redditData.posts || []).slice(0, 15);
         const commentsToAnalyze = (redditData.comments || []).slice(0, 30);
+        console.log(`[Perf] Starting HF sentiment analysis for ${postsToAnalyze.length} posts and ${commentsToAnalyze.length} comments...`);
+        const hfStart = performance.now();
         analysisData = await analyzeWithHuggingFace(
           postsToAnalyze,
           commentsToAnalyze
         );
-        console.log(`HF sentiment analysis completed for ${postsToAnalyze.length} posts and ${commentsToAnalyze.length} comments`);
+        const hfEnd = performance.now();
+        console.log(`[Perf] HF sentiment analysis completed in ${(hfEnd - hfStart).toFixed(2)}ms`);
       } catch (analysisError) {
-        console.error('HF analysis error (continuing without sentiment):', analysisError);
+        console.error('[Perf] HF analysis error (continuing without sentiment):', analysisError);
         // Continue with null analysisData — profile still renders with Reddit data
       }
 
@@ -1056,7 +1061,7 @@ const UserProfiling = () => {
           [...rawPosts, ...rawComments].forEach((item: any) => {
             if (item.subreddit) subCounts[item.subreddit] = (subCounts[item.subreddit] || 0) + 1;
           });
-          const tops = Object.entries(subCounts).sort(([,a],[,b]) => b - a).slice(0, 5);
+          const tops = Object.entries(subCounts).sort(([,a],[,b]) => (b as number) - (a as number)).slice(0, 5);
           return tops.length > 0 ? tops.map(([sub]) => `Active in r/${sub}`) : ['No patterns detected'];
         })(),
         wordCloud: wordCloudData,
@@ -1066,6 +1071,9 @@ const UserProfiling = () => {
         isPrivateProfile: redditData.isPrivateProfile || false,
         dataSource: redditData.dataSource || 'oauth',
       };
+
+      const perfMapping = performance.now();
+      console.log(`[Perf] Data mapping & local heuristics completed in ${(perfMapping - (perfReddit ?? performance.now())).toFixed(2)}ms`);
 
       setProfileData(profileResult);
       setTargetProgress(100);
@@ -1161,6 +1169,10 @@ const UserProfiling = () => {
         title: "Analysis Complete",
         description: `Successfully analyzed profile for u/${cleanUsername}`,
       });
+      
+      const perfDb = performance.now();
+      console.log(`[Perf] Database save & context update completed in ${(perfDb - perfMapping).toFixed(2)}ms`);
+      console.log(`[Perf] TOTAL ANALYSIS TIME: ${(perfDb - perfStart).toFixed(2)}ms`);
 
     } catch (err: any) {
       console.error('Error analyzing user:', err);
