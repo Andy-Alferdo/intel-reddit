@@ -2010,6 +2010,11 @@ const Analysis = () => {
                     onCommunityClick={(communityName) => {
                       setSelectedCommunity(communityName === selectedCommunity ? null : communityName);
                     }}
+                    onAnalyzeCommunity={(communityName) => {
+                      const cleanName = communityName.replace(/^r\//, '');
+                      setActiveTab('community');
+                      handleCommunityAnalysis(cleanName);
+                    }}
                   />
                   {selectedCommunity && (
                     <div className="mt-2 text-center">

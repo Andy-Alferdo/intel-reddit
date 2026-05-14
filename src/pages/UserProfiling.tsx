@@ -228,11 +228,14 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   // Transform data for Treemap and sort by count (largest first)
   const treemapData = data
     .sort((a, b) => b.count - a.count)
-    .map((item, index) => ({
-      name: `r/${item.name}`,
-      size: item.count,
-      fill: TREEMAP_COLORS[index % TREEMAP_COLORS.length]
-    }));
+    .map((item, index) => {
+      const displayName = item.name.startsWith('r/') ? item.name : `r/${item.name}`;
+      return {
+        name: displayName,
+        size: item.count,
+        fill: TREEMAP_COLORS[index % TREEMAP_COLORS.length]
+      };
+    });
 
   // Custom content renderer for Treemap
   const CustomTreemapContent = (props: any) => {
@@ -248,7 +251,7 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
 
     // Handle click to open Reddit URL
     const handleRectClick = () => {
-      const cleanName = name.replace('r/', '');
+      const cleanName = name.replace(/^r\//, '');
       window.open(`https://www.reddit.com/r/${cleanName}`, '_blank');
     };
 
@@ -1938,7 +1941,7 @@ const UserProfiling = () => {
                         return (
                           <div
                             key={i}
-                            className="transition-all duration-150 ease-in-out hover:bg-[#f8faff] hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
+                            className="transition-all duration-150 ease-in-out hover:bg-white/5 hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
                             style={{
                               padding: '6px 10px',
                               borderRadius: '8px'
@@ -1946,11 +1949,10 @@ const UserProfiling = () => {
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span
-                                className="truncate"
+                                className="truncate text-foreground"
                                 style={{
                                   fontWeight: '500',
-                                  fontSize: '14px',
-                                  color: '#1e293b'
+                                  fontSize: '14px'
                                 }}
                               >
                                 {w.word}

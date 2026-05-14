@@ -21,8 +21,8 @@ interface UserCommunityNetworkGraphProps {
   title: string;
   nodes: NetworkNode[];
   links: NetworkLink[];
-  primaryUserId?: string;
   onCommunityClick?: (communityName: string) => void;
+  onAnalyzeCommunity?: (communityName: string) => void;
   height?: number;
 }
 
@@ -51,6 +51,7 @@ export const UserCommunityNetworkGraph = ({
   links, 
   primaryUserId,
   onCommunityClick,
+  onAnalyzeCommunity,
   height = 500,
 }: UserCommunityNetworkGraphProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -136,9 +137,13 @@ export const UserCommunityNetworkGraph = ({
   }, []);
 
   const analyzeCommunityInApp = useCallback((node: SimulatedNode) => {
-    if (node.type !== 'community' || !onCommunityClick) return;
-    onCommunityClick(node.label);
-  }, [onCommunityClick]);
+    if (node.type !== 'community') return;
+    if (onAnalyzeCommunity) {
+      onAnalyzeCommunity(node.label);
+    } else if (onCommunityClick) {
+      onCommunityClick(node.label);
+    }
+  }, [onCommunityClick, onAnalyzeCommunity]);
 
   const unpinNode = useCallback((node: SimulatedNode) => {
     node.fixed = false;
