@@ -347,6 +347,8 @@ const UserProfiling = () => {
   const [error, setError] = useState<string | null>(null);
   const [visiblePosts, setVisiblePosts] = useState(INITIAL_VISIBLE);
   const [visibleComments, setVisibleComments] = useState(INITIAL_VISIBLE);
+  const [isAnalyzingMorePosts, setIsAnalyzingMorePosts] = useState(false);
+  const [isAnalyzingMoreComments, setIsAnalyzingMoreComments] = useState(false);
   const [postsSort, setPostsSort] = useState<'recent' | 'top'>('recent');
   const [commentsSort, setCommentsSort] = useState<'recent' | 'top'>('recent');
   const [sentimentFilter, setSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
@@ -1012,6 +1014,7 @@ const UserProfiling = () => {
             num_comments: p.num_comments || 0,
             subreddit: p.subreddit || '',
             title: p.title || '',
+            _isAnalyzed: !!analysisData?.postSentiments?.[i]
           };
         }),
         commentSentiments: (redditData.comments || []).map((c: any, i: number) => {
@@ -1025,6 +1028,7 @@ const UserProfiling = () => {
             created_utc: c.created_utc,
             subreddit: c.subreddit,
             score: c.score ?? s.score ?? 0,
+            _isAnalyzed: !!analysisData?.commentSentiments?.[i]
           };
         }),
         postSentimentBreakdown: (() => {
@@ -1518,6 +1522,115 @@ const UserProfiling = () => {
     ].filter(item => item.value > 0);
   };
 
+  const handleLoadMorePosts = async () => {
+    const nextLimit = visiblePosts + 10;
+    const upcomingPosts = sortedPosts.slice(visiblePosts, nextLimit);
+    const unanalyzedPosts = upcomingPosts.filter((p: any) => !p._isAnalyzed);
+    
+    if (unanalyzedPosts.length > 0) {
+      setIsAnalyzingMorePosts(true);
+      try {
+        const postsToAnalyze = unanalyzedPosts.map((p: any) => ({
+          title: p.title || '',
+          selftext: p.body || '',
+          subreddit: p.subreddit || ''
+        }));
+        
+        const result = await analyzeWithHuggingFace(postsToAnalyze, []);
+        
+        setProfileData((prev: any) => {
+          if (!prev) return prev;
+          const newPostSentiments = [...prev.postSentiments];
+          
+          unanalyzedPosts.forEach((up: any, index: number) => {
+            const hfResult = result.postSentiments?.[index];
+            if (hfResult) {
+              const origIndex = newPostSentiments.findIndex(p => p.permalink === up.permalink && p.created_utc === up.created_utc);
+              if (origIndex !== -1) {
+                newPostSentiments[origIndex] = { ...newPostSentiments[origIndex], ...hfResult, _isAnalyzed: true };
+              }
+            }
+          });
+          
+          const pos = newPostSentiments.filter(s => s.sentiment === 'positive').length;
+          const neg = newPostSentiments.filter(s => s.sentiment === 'negative').length;
+          const neu = newPostSentiments.filter(s => s.sentiment === 'neutral').length;
+          const total = newPostSentiments.length || 1;
+          
+          return {
+            ...prev,
+            postSentiments: newPostSentiments,
+            postSentimentBreakdown: { 
+              positive: Math.round((pos/total)*100), 
+              neutral: Math.round((neu/total)*100), 
+              negative: Math.round((neg/total)*100) 
+            },
+          };
+        });
+      } catch (e) {
+        console.error("Failed to analyze more posts:", e);
+      } finally {
+        setIsAnalyzingMorePosts(false);
+      }
+    }
+    setVisiblePosts(nextLimit);
+  };
+
+  const handleLoadMoreComments = async () => {
+    const nextLimit = visibleComments + 10;
+    const upcomingComments = sortedComments.slice(visibleComments, nextLimit);
+    const unanalyzedComments = upcomingComments.filter((c: any) => !c._isAnalyzed);
+    
+    if (unanalyzedComments.length > 0) {
+      setIsAnalyzingMoreComments(true);
+      try {
+        const commentsToAnalyze = unanalyzedComments.map((c: any) => ({
+          body: c.body || c.text || '',
+          subreddit: c.subreddit || ''
+        }));
+        
+        const result = await analyzeWithHuggingFace([], commentsToAnalyze);
+        
+        setProfileData((prev: any) => {
+          if (!prev) return prev;
+          const newCommentSentiments = [...prev.commentSentiments];
+          
+          unanalyzedComments.forEach((uc: any, index: number) => {
+            const hfResult = result.commentSentiments?.[index];
+            if (hfResult) {
+              const origIndex = newCommentSentiments.findIndex(c => c.permalink === uc.permalink && c.created_utc === uc.created_utc);
+              if (origIndex !== -1) {
+                newCommentSentiments[origIndex] = { ...newCommentSentiments[origIndex], ...hfResult, _isAnalyzed: true };
+              }
+            }
+          });
+          
+          const pos = newCommentSentiments.filter(s => s.sentiment === 'positive').length;
+          const neg = newCommentSentiments.filter(s => s.sentiment === 'negative').length;
+          const neu = newCommentSentiments.filter(s => s.sentiment === 'neutral').length;
+          const total = newCommentSentiments.length || 1;
+          
+          return {
+            ...prev,
+            commentSentiments: newCommentSentiments,
+            commentSentimentBreakdown: { 
+              positive: Math.round((pos/total)*100), 
+              neutral: Math.round((neu/total)*100), 
+              negative: Math.round((neg/total)*100) 
+            },
+          };
+        });
+      } catch (e) {
+        console.error("Failed to analyze more comments:", e);
+      } finally {
+        setIsAnalyzingMoreComments(false);
+      }
+    }
+    setVisibleComments(nextLimit);
+  };
+
+
+
   return (
     <TooltipProvider>
       <div className="p-6 space-y-5 relative bg-background min-h-screen">
@@ -1695,8 +1808,8 @@ const UserProfiling = () => {
                             <>
                               {sortedPosts.slice(0, visiblePosts).map((item: any, i: number) => renderSentimentRow(item, `post-${postsSort}-${i}`, true))}
                               {sortedPosts.length > visiblePosts && (
-                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVisiblePosts(p => p + 10)}>
-                                  <ChevronDown className="h-3 w-3 mr-1" /> See {sortedPosts.length - visiblePosts} more
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleLoadMorePosts} disabled={isAnalyzingMorePosts}>
+                                  {isAnalyzingMorePosts ? <LoadingSpinner size="sm" text="Analyzing..." /> : <><ChevronDown className="h-3 w-3 mr-1" /> See {sortedPosts.length - visiblePosts} more</>}
                                 </Button>
                               )}
                             </>
@@ -1723,8 +1836,8 @@ const UserProfiling = () => {
                             <>
                               {sortedComments.slice(0, visibleComments).map((item: any, i: number) => renderSentimentRow(item, `comment-${commentsSort}-${i}`, false))}
                               {sortedComments.length > visibleComments && (
-                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVisibleComments(p => p + 10)}>
-                                  <ChevronDown className="h-3 w-3 mr-1" /> See {sortedComments.length - visibleComments} more
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={handleLoadMoreComments} disabled={isAnalyzingMoreComments}>
+                                  {isAnalyzingMoreComments ? <LoadingSpinner size="sm" text="Analyzing..." /> : <><ChevronDown className="h-3 w-3 mr-1" /> See {sortedComments.length - visibleComments} more</>}
                                 </Button>
                               )}
                             </>
