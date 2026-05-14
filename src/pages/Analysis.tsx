@@ -1524,7 +1524,7 @@ const Analysis = () => {
                                                   <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="h-5 px-2 text-[10px] border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                                                    className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
                                                     disabled={loadingDeepAnalysis[index]}
                                                     onClick={() => {
                                                       const newExpanded = new Set(expandedEvidence);
@@ -1546,17 +1546,17 @@ const Analysis = () => {
                                                   >
                                                     {loadingDeepAnalysis[index] ? (
                                                       <>
-                                                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                                                        <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
                                                         Analyzing...
                                                       </>
                                                     ) : isExpanded ? (
                                                       <>
-                                                        <Eye className="h-2.5 w-2.5" />
+                                                        <Eye className="h-2.5 w-2.5 mr-1" />
                                                         Hide Details
                                                       </>
                                                     ) : (
                                                       <>
-                                                        <BarChart3 className="h-2.5 w-2.5" />
+                                                        <Brain className="h-2.5 w-2.5 mr-1" />
                                                         Show Details
                                                       </>
                                                     )}

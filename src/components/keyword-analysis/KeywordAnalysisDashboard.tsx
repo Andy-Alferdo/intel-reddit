@@ -335,13 +335,13 @@ const PostCard = ({
           </div>
 
           {/* Title */}
-          <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors">
+          <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors break-words">
             {post.title}
           </h3>
 
           {/* Body Preview */}
           {post.selftext && (
-            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-2 break-words">
               {post.selftext}
             </p>
           )}
