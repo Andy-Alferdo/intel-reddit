@@ -334,6 +334,9 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
         </Treemap>
       </ResponsiveContainer>
     </div>
+  );
+};
+
 const UserProfiling = () => {
   const location = useLocation();
   const [username, setUsername] = useState('');
