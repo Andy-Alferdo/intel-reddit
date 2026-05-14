@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { analyzeDeep } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvestigation } from "@/contexts/InvestigationContext";
@@ -445,12 +445,10 @@ const LinkAnalysis = () => {
       let postSentiments: any[] = [];
       let commentSentiments: any[] = [];
       try {
-        const { data: analysisData } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
-          }
-        });
+        const analysisData = await analyzeWithHuggingFace(
+          posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
+        );
         if (analysisData) {
           postSentiments = (analysisData.postSentiments || []).map((s: any, i: number) => ({
             ...s,

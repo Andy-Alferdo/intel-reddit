@@ -1,4 +1,4 @@
-import { analyzeDeep } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -353,14 +353,12 @@ const Analysis = () => {
       const postsForAnalysis = [...recent20Pre, ...uniqueTop];
       
       try {
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: []
-          }
-        });
+        const analysisData = await analyzeWithHuggingFace(
+          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          []
+        );
 
-        if (!analysisError && analysisData) {
+        if (analysisData) {
           postSentiments = analysisData.postSentiments || [];
           
           // Attach sentiment to each post by index (AI returns in same order as sent)
@@ -526,14 +524,12 @@ const Analysis = () => {
       let postSentiments: SentimentItem[] = [];
       
       try {
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: []
-          }
-        });
+        const analysisData = await analyzeWithHuggingFace(
+          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          []
+        );
 
-        if (!analysisError && analysisData) {
+        if (analysisData) {
           postSentiments = analysisData.postSentiments || [];
           
           // Attach sentiment to each post by index
@@ -798,12 +794,10 @@ const Analysis = () => {
       let postSentiments: any[] = [];
       let commentSentiments: any[] = [];
       try {
-        const { data: analysisData } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
-          }
-        });
+        const analysisData = await analyzeWithHuggingFace(
+          posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
+        );
         if (analysisData) {
           postSentiments = (analysisData.postSentiments || []).map((s: any, i: number) => ({
             ...s,

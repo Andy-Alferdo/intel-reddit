@@ -23,7 +23,7 @@ import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
 import { useMonitoring } from '@/contexts/MonitoringContext';
 import { useNavigate } from 'react-router-dom';
-import { analyzeDeep } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface SentimentItem {
@@ -821,14 +821,12 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       let postSentiments: SentimentItem[] = [];
 
       try {
-        const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
-          body: {
-            posts: postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-            comments: []
-          }
-        });
+        const analysisData = await analyzeWithHuggingFace(
+          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
+          []
+        );
 
-        if (!analysisError && analysisData) {
+        if (analysisData) {
           postSentiments = analysisData.postSentiments || [];
 
           // Attach sentiment to each post by index

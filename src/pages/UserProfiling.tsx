@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { analyzeDeep } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -901,14 +901,13 @@ const UserProfiling = () => {
       setTargetProgress(60);
 
       // Analyze content for sentiment and locations
-      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-content', {
-        body: {
-          posts: redditData.posts || [],
-          comments: redditData.comments || []
-        }
-      });
-
-      if (analysisError) {
+      let analysisData: any = null;
+      try {
+        analysisData = await analyzeWithHuggingFace(
+          redditData.posts || [],
+          redditData.comments || []
+        );
+      } catch (analysisError) {
         console.error('Analysis error:', analysisError);
         // Continue even if analysis fails
       }
