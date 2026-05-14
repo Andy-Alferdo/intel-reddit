@@ -1012,13 +1012,34 @@ const UserProfiling = () => {
         totalKarma: redditData.user.link_karma + redditData.user.comment_karma,
         postKarma: redditData.user.link_karma,
         commentKarma: redditData.user.comment_karma,
-        activeSubreddits: analysisData?.topSubreddits || [],
+        activeSubreddits: (() => {
+          // Compute top subreddits from raw posts/comments since HF doesn't return topSubreddits
+          const subCounts: Record<string, number> = {};
+          [...rawPosts, ...rawComments].forEach((item: any) => {
+            if (item.subreddit) subCounts[item.subreddit] = (subCounts[item.subreddit] || 0) + 1;
+          });
+          return Object.entries(subCounts)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10)
+            .map(([name, count]) => ({ name: `r/${name}`, count }));
+        })(),
         activityPattern: {
           mostActiveHour: mostActiveHour ? `${mostActiveHour[0]}:00-${parseInt(mostActiveHour[0]) + 1}:00 PKT` : 'N/A',
           mostActiveDay: mostActiveDay?.[0] || 'N/A',
           timezone: 'PKT (Pakistan Standard Time)',
         },
-        sentimentAnalysis: analysisData?.sentiment?.breakdown || { positive: 33, neutral: 34, negative: 33 },
+        sentimentAnalysis: (() => {
+          // Compute sentiment percentages from the HF sentimentBreakdown (decimal 0-1)
+          const bd = analysisData?.sentimentBreakdown;
+          if (bd) {
+            return {
+              positive: Math.round((bd.positive || 0) * 100),
+              neutral: Math.round((bd.neutral || 0) * 100),
+              negative: Math.round((bd.negative || 0) * 100),
+            };
+          }
+          return { positive: 33, neutral: 34, negative: 33 };
+        })(),
         postSentiments: (analysisData?.postSentiments || []).map((s: any, i: number) => ({
           ...s,
           body: s.body || redditData.posts?.[i]?.selftext || '',
@@ -1038,13 +1059,37 @@ const UserProfiling = () => {
           subreddit: redditData.comments?.[i]?.subreddit,
           score: redditData.comments?.[i]?.score ?? s.score ?? 0,
         })),
-        postSentimentBreakdown: analysisData?.sentiment?.postBreakdown || null,
-        commentSentimentBreakdown: analysisData?.sentiment?.commentBreakdown || null,
+        postSentimentBreakdown: (() => {
+          const posts = analysisData?.postSentiments || [];
+          if (posts.length === 0) return null;
+          const pos = posts.filter((s: any) => s.sentiment === 'positive').length;
+          const neg = posts.filter((s: any) => s.sentiment === 'negative').length;
+          const neu = posts.filter((s: any) => s.sentiment === 'neutral').length;
+          const total = posts.length;
+          return { positive: Math.round((pos/total)*100), neutral: Math.round((neu/total)*100), negative: Math.round((neg/total)*100) };
+        })(),
+        commentSentimentBreakdown: (() => {
+          const comments = analysisData?.commentSentiments || [];
+          if (comments.length === 0) return null;
+          const pos = comments.filter((s: any) => s.sentiment === 'positive').length;
+          const neg = comments.filter((s: any) => s.sentiment === 'negative').length;
+          const neu = comments.filter((s: any) => s.sentiment === 'neutral').length;
+          const total = comments.length;
+          return { positive: Math.round((pos/total)*100), neutral: Math.round((neu/total)*100), negative: Math.round((neg/total)*100) };
+        })(),
         locationIndicators: analysisData?.locations || ['No specific locations detected'],
-        behaviorPatterns: analysisData?.patterns?.topicInterests || ['Analyzing...'],
+        behaviorPatterns: (() => {
+          // Derive topic interests from subreddit activity
+          const subCounts: Record<string, number> = {};
+          [...rawPosts, ...rawComments].forEach((item: any) => {
+            if (item.subreddit) subCounts[item.subreddit] = (subCounts[item.subreddit] || 0) + 1;
+          });
+          const tops = Object.entries(subCounts).sort(([,a],[,b]) => b - a).slice(0, 5);
+          return tops.length > 0 ? tops.map(([sub]) => `Active in r/${sub}`) : ['No patterns detected'];
+        })(),
         wordCloud: wordCloudData,
-        stats: analysisData?.stats || {},
-        emotions: analysisData?.emotions || {},
+        stats: {},
+        emotions: {},
         monthlyActivity,
         isPrivateProfile: redditData.isPrivateProfile || false,
         dataSource: redditData.dataSource || 'oauth',

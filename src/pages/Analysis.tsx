@@ -273,7 +273,24 @@ const Analysis = () => {
 
       if (error) throw error;
 
-      const posts = redditData.posts || [];
+      let posts = redditData.posts || [];
+
+      // Fallback: if scraper returned 0 posts (common with multi-word queries),
+      // try the public Reddit JSON API directly
+      if (posts.length === 0) {
+        try {
+          const fallbackUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(keyword.trim())}&limit=100&sort=relevance&t=all`;
+          const fallbackRes = await fetch(fallbackUrl, { headers: { 'User-Agent': 'IntelReddit/1.0' } });
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            posts = fallbackData?.data?.children?.map((c: any) => c.data) || [];
+            console.log(`Public API fallback found ${posts.length} posts for "${keyword}"`);
+          }
+        } catch (fbErr) {
+          console.warn('Public Reddit fallback failed:', fbErr);
+        }
+      }
+
       const matchingPosts = posts;
       setTargetProgress(75);
 

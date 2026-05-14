@@ -135,6 +135,15 @@ export async function analyzeSingleText(text: string): Promise<{
  * @returns Detailed analysis with word importance scores
  */
 export async function analyzeDeep(text: string): Promise<DeepAnalysisResult> {
+  if (!text || !text.trim()) {
+    return {
+      text: '',
+      overall_sentiment: 'neutral',
+      confidence: 0,
+      word_importance: [],
+      explanation: 'No text provided for analysis.',
+    };
+  }
   const client = await getClient();
   const result = await client.predict("/deep_analyze", {
     text: text
