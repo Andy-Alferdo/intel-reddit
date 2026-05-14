@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
+import { analyzeDeep } from '@/integrations/huggingface/client';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -854,19 +854,56 @@ const UserProfiling = () => {
       console.log('Reddit data fetched successfully');
       setTargetProgress(60);
 
-      // Analyze content for sentiment and locations
-      let analysisData: any = null;
-      try {
-        analysisData = await analyzeWithHuggingFace(
-          redditData.posts || [],
-          redditData.comments || []
-        );
-      } catch (analysisError) {
-        console.error('Analysis error:', analysisError);
-        // Continue even if analysis fails
-      }
+      // ── Fast local sentiment (no HF call) ──────────────────────
+      // HF is only invoked on-demand when the user clicks the XAI button.
+      // This gives instant profile rendering.
+      const classifyLocally = (text: string): 'positive' | 'negative' | 'neutral' => {
+        if (!text || !text.trim()) return 'neutral';
+        const lower = text.toLowerCase();
+        const posWords = ['love','great','awesome','amazing','good','best','happy','thanks','thank','excellent','fantastic','wonderful','nice','cool','helpful','beautiful','perfect','glad','enjoy','excited','appreciate'];
+        const negWords = ['hate','bad','worst','terrible','awful','horrible','sucks','angry','annoying','disgusting','pathetic','stupid','ugly','trash','garbage','disappointed','useless','boring','sad','wrong','fail'];
+        let pos = 0, neg = 0;
+        for (const w of posWords) if (lower.includes(w)) pos++;
+        for (const w of negWords) if (lower.includes(w)) neg++;
+        if (pos > neg) return 'positive';
+        if (neg > pos) return 'negative';
+        return 'neutral';
+      };
 
-      console.log('Analysis completed');
+      const localPostSentiments = (redditData.posts || []).map((p: any) => {
+        const text = `${p.title || ''} ${p.selftext || ''}`;
+        const sentiment = classifyLocally(text);
+        return { sentiment, text_preview: text.slice(0, 120), confidence: null, all_probabilities: {} };
+      });
+
+      const localCommentSentiments = (redditData.comments || []).map((c: any) => {
+        const text = c.body || '';
+        const sentiment = classifyLocally(text);
+        return { sentiment, text_preview: text.slice(0, 120), confidence: null, all_probabilities: {} };
+      });
+
+      // Build a lightweight analysisData object matching the HF shape
+      const allLocal = [...localPostSentiments, ...localCommentSentiments];
+      const totalItems = allLocal.length || 1;
+      const analysisData = {
+        postSentiments: localPostSentiments,
+        commentSentiments: localCommentSentiments,
+        postCount: localPostSentiments.length,
+        commentCount: localCommentSentiments.length,
+        sentimentBreakdown: {
+          positive: allLocal.filter(s => s.sentiment === 'positive').length / totalItems,
+          neutral:  allLocal.filter(s => s.sentiment === 'neutral').length / totalItems,
+          negative: allLocal.filter(s => s.sentiment === 'negative').length / totalItems,
+        },
+        locations: [],
+        dominantSentiment: (() => {
+          const counts = { positive: 0, neutral: 0, negative: 0 };
+          allLocal.forEach(s => counts[s.sentiment]++);
+          return Object.entries(counts).sort(([,a],[,b]) => b - a)[0][0];
+        })(),
+      };
+
+      console.log('Local sentiment analysis completed (HF skipped for speed)');
       setTargetProgress(90);
 
       // Calculate account age
@@ -1496,14 +1533,12 @@ const UserProfiling = () => {
   };
 
   const sentimentPieData = (b: any) => {
-    console.log('Sentiment breakdown data:', b);
-    const data = b ? [
-      { name: 'Positive', value: Math.round((b.positive || 0) * 100), color: SENT_COLORS.positive },
-      { name: 'Neutral', value: Math.round((b.neutral || 0) * 100), color: SENT_COLORS.neutral },
-      { name: 'Negative', value: Math.round((b.negative || 0) * 100), color: SENT_COLORS.negative },
-    ].filter(item => item.value > 0) : [];
-    console.log('Processed pie data:', data);
-    return data;
+    if (!b) return [];
+    return [
+      { name: 'Positive', value: b.positive || 0, color: SENT_COLORS.positive },
+      { name: 'Neutral', value: b.neutral || 0, color: SENT_COLORS.neutral },
+      { name: 'Negative', value: b.negative || 0, color: SENT_COLORS.negative },
+    ].filter(item => item.value > 0);
   };
 
   return (
