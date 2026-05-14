@@ -23,7 +23,7 @@ import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
 import { useMonitoring } from '@/contexts/MonitoringContext';
 import { useNavigate } from 'react-router-dom';
-import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace, analyzeWithTimeout } from '@/integrations/huggingface/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface SentimentItem {
@@ -838,9 +838,10 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       let postSentiments: SentimentItem[] = [];
 
       try {
-        const analysisData = await analyzeWithHuggingFace(
-          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          []
+        const analysisData = await analyzeWithTimeout(
+          postsForAnalysis,
+          [],
+          30000 // 30 seconds
         );
 
         if (analysisData) {

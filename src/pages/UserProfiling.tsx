@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace, analyzeWithTimeout } from '@/integrations/huggingface/client';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -334,58 +334,6 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
         </Treemap>
       </ResponsiveContainer>
     </div>
-  );
-};
-
-const analyzeWithTimeout = async (
-  posts: any[], 
-  comments: any[], 
-  maxTimeMs: number
-) => {
-  const result = {
-    postSentiments: [] as any[],
-    commentSentiments: [] as any[],
-  };
-  
-  const startTime = performance.now();
-  let pIdx = 0;
-  let cIdx = 0;
-  
-  // We process in very small chunks to check time frequently
-  const POST_CHUNK = 2;
-  const COMMENT_CHUNK = 4;
-  
-  while (performance.now() - startTime < maxTimeMs && (pIdx < posts.length || cIdx < comments.length)) {
-    const pChunk = posts.slice(pIdx, pIdx + POST_CHUNK);
-    const cChunk = comments.slice(cIdx, cIdx + COMMENT_CHUNK);
-    
-    if (pChunk.length === 0 && cChunk.length === 0) break;
-    
-    try {
-      const chunkResult = await analyzeWithHuggingFace(
-        pChunk.map(p => ({ title: p.title || '', selftext: p.selftext || p.body || '', subreddit: p.subreddit || '' })),
-        cChunk.map(c => ({ body: c.body || c.text || '', subreddit: c.subreddit || '' }))
-      );
-      
-      result.postSentiments.push(...(chunkResult.postSentiments || []));
-      result.commentSentiments.push(...(chunkResult.commentSentiments || []));
-      
-      pIdx += pChunk.length;
-      cIdx += cChunk.length;
-    } catch (e) {
-      console.error("Chunk analysis failed", e);
-      break; 
-    }
-  }
-  
-  return {
-    postSentiments: result.postSentiments,
-    commentSentiments: result.commentSentiments,
-    lastPostIdx: pIdx,
-    lastCommentIdx: cIdx
-  };
-};
-
 const UserProfiling = () => {
   const location = useLocation();
   const [username, setUsername] = useState('');
@@ -1989,7 +1937,7 @@ const UserProfiling = () => {
                     {(profileData.locationIndicators || []).slice(0, 6).map((loc: string, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-muted border border-border">
                         <MapPin className="h-3 w-3 text-blue-500 flex-shrink-0" />
-                        <span className="text-slate-700 truncate">{loc}</span>
+                        <span className="text-foreground truncate">{loc}</span>
                       </div>
                     ))}
                   </CardContent>

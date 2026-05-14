@@ -1,4 +1,4 @@
-import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace, analyzeWithTimeout } from '@/integrations/huggingface/client';
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -370,9 +370,10 @@ const Analysis = () => {
       const postsForAnalysis = [...recent20Pre, ...uniqueTop];
       
       try {
-        const analysisData = await analyzeWithHuggingFace(
-          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          []
+        const analysisData = await analyzeWithTimeout(
+          postsForAnalysis,
+          [],
+          30000 // 30 seconds
         );
 
         if (analysisData) {
@@ -541,9 +542,10 @@ const Analysis = () => {
       let postSentiments: SentimentItem[] = [];
       
       try {
-        const analysisData = await analyzeWithHuggingFace(
-          postsForAnalysis.map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          []
+        const analysisData = await analyzeWithTimeout(
+          postsForAnalysis,
+          [],
+          30000
         );
 
         if (analysisData) {
@@ -811,9 +813,10 @@ const Analysis = () => {
       let postSentiments: any[] = [];
       let commentSentiments: any[] = [];
       try {
-        const analysisData = await analyzeWithHuggingFace(
+        const analysisData = await analyzeWithTimeout(
           posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
+          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' })),
+          30000
         );
         if (analysisData) {
           postSentiments = (analysisData.postSentiments || []).map((s: any, i: number) => ({

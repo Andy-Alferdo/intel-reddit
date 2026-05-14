@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace, analyzeWithTimeout } from '@/integrations/huggingface/client';
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvestigation } from "@/contexts/InvestigationContext";
@@ -444,27 +444,40 @@ const LinkAnalysis = () => {
       // Analyze content for sentiment
       let postSentiments: any[] = [];
       let commentSentiments: any[] = [];
+      let initialVisible = INITIAL_VISIBLE;
+      
       try {
-        const analysisData = await analyzeWithHuggingFace(
-          posts.slice(0, 40).map((p: any) => ({ title: p.title || '', selftext: p.selftext || '', subreddit: p.subreddit || '' })),
-          comments.slice(0, 40).map((c: any) => ({ body: c.body || '', subreddit: c.subreddit || '' }))
+        const analysisData = await analyzeWithTimeout(
+          posts,
+          comments,
+          30000 // 30 seconds
         );
         if (analysisData) {
-          postSentiments = (analysisData.postSentiments || []).map((s: any, i: number) => ({
-            ...s,
-            subreddit: posts[i]?.subreddit || '',
-            created_utc: posts[i]?.created_utc || 0,
-            score: posts[i]?.score || 0,
-            permalink: posts[i]?.permalink || '',
-            body: posts[i]?.selftext || ''
-          }));
-          commentSentiments = (analysisData.commentSentiments || []).map((s: any, i: number) => ({
-            ...s,
-            subreddit: comments[i]?.subreddit || '',
-            created_utc: comments[i]?.created_utc || 0,
-            score: comments[i]?.score || 0,
-            permalink: comments[i]?.permalink || ''
-          }));
+          postSentiments = posts.map((p: any, i: number) => {
+            const s = analysisData.postSentiments?.[i] || { sentiment: 'neutral' };
+            return {
+              ...s,
+              subreddit: p.subreddit || '',
+              created_utc: p.created_utc || 0,
+              score: p.score || 0,
+              permalink: p.permalink || '',
+              body: p.selftext || '',
+              _isAnalyzed: !!analysisData.postSentiments?.[i]
+            };
+          });
+          commentSentiments = comments.map((c: any, i: number) => {
+            const s = analysisData.commentSentiments?.[i] || { sentiment: 'neutral' };
+            return {
+              ...s,
+              subreddit: c.subreddit || '',
+              created_utc: c.created_utc || 0,
+              score: c.score || 0,
+              permalink: c.permalink || '',
+              body: c.body || '',
+              _isAnalyzed: !!analysisData.commentSentiments?.[i]
+            };
+          });
+          initialVisible = Math.max(INITIAL_VISIBLE, analysisData.lastPostIdx + analysisData.lastCommentIdx);
         }
       } catch (err) { console.error('Sentiment analysis error:', err); }
       setTargetProgress(80);
@@ -554,6 +567,8 @@ const LinkAnalysis = () => {
       };
 
       setLinkData(analysisResult);
+      setVisiblePosts(Math.ceil(initialVisible / 2));
+      setVisibleComments(Math.floor(initialVisible / 2));
       setTargetProgress(100);
       fetchSavedAnalyses();
     } catch (err: any) {

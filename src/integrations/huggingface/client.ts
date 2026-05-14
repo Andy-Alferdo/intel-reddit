@@ -112,6 +112,62 @@ export async function analyzeWithHuggingFace(
 }
 
 /**
+ * Progressively analyze Reddit content using a time limit
+ * @param posts Array of Reddit posts
+ * @param comments Array of Reddit comments
+ * @param maxTimeMs Maximum time in milliseconds to spend analyzing
+ * @returns Progressively analyzed results with tracking indices
+ */
+export async function analyzeWithTimeout(
+  posts: any[], 
+  comments: any[], 
+  maxTimeMs: number
+) {
+  const result = {
+    postSentiments: [] as any[],
+    commentSentiments: [] as any[],
+  };
+  
+  const startTime = performance.now();
+  let pIdx = 0;
+  let cIdx = 0;
+  
+  // We process in very small chunks to check time frequently
+  const POST_CHUNK = 2;
+  const COMMENT_CHUNK = 4;
+  
+  while (performance.now() - startTime < maxTimeMs && (pIdx < posts.length || cIdx < comments.length)) {
+    const pChunk = posts.slice(pIdx, pIdx + POST_CHUNK);
+    const cChunk = comments.slice(cIdx, cIdx + COMMENT_CHUNK);
+    
+    if (pChunk.length === 0 && cChunk.length === 0) break;
+    
+    try {
+      const chunkResult = await analyzeWithHuggingFace(
+        pChunk.map(p => ({ title: p.title || '', selftext: p.selftext || p.body || '', subreddit: p.subreddit || '' })),
+        cChunk.map(c => ({ body: c.body || c.text || '', subreddit: c.subreddit || '' }))
+      );
+      
+      result.postSentiments.push(...(chunkResult.postSentiments || []));
+      result.commentSentiments.push(...(chunkResult.commentSentiments || []));
+      
+      pIdx += pChunk.length;
+      cIdx += cChunk.length;
+    } catch (e) {
+      console.error("Chunk analysis failed", e);
+      break; 
+    }
+  }
+  
+  return {
+    postSentiments: result.postSentiments,
+    commentSentiments: result.commentSentiments,
+    lastPostIdx: pIdx,
+    lastCommentIdx: cIdx
+  };
+}
+
+/**
  * Analyze single text sentiment
  * @param text Text to analyze
  * @returns Sentiment result
