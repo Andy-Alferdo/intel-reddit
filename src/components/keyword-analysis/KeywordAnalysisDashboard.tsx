@@ -169,7 +169,7 @@ const XAIDeepAnalysis = ({
   // Loading state
   if (isAnalyzing) {
     return (
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden mt-2">
+      <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden mt-2">
         <div className="px-3 py-4 flex items-center justify-center">
           <div className="flex items-center gap-2 text-slate-500">
             <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -181,10 +181,10 @@ const XAIDeepAnalysis = ({
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden mt-2">
+    <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden mt-2">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-slate-100">
-        <div className="text-xs font-semibold text-slate-900">Sentiment analysis</div>
+      <div className="px-3 py-2 border-b border-border">
+        <div className="text-xs font-semibold text-foreground">Sentiment analysis</div>
       </div>
 
       {/* Content */}
@@ -291,7 +291,7 @@ const PostCard = ({
   const showDeep = deepAnalysisState?.showDeep || false;
 
   return (
-    <div className="group relative rounded-lg border border-slate-200 bg-white p-3 hover:border-blue-300 hover:shadow-sm transition-all">
+    <div className="group relative rounded-lg border border-border bg-card p-3 hover:border-blue-400 hover:shadow-sm transition-all">
       <div className="flex items-start gap-3">
         {/* Reddit-style Voting Column */}
         <div className="flex flex-col items-center gap-0.5 pt-1">
@@ -319,10 +319,10 @@ const PostCard = ({
         <div className="flex-1 min-w-0">
           {/* Header Row */}
           <div className="flex items-center justify-between gap-2 mb-1">
-            <div className="flex items-center gap-1.5 text-xs text-slate-600 min-w-0">
-              <span className="font-medium text-slate-900 truncate">r/{post.subreddit}</span>
-              <span className="text-slate-400">•</span>
-              <span className="text-slate-500">u/{post.author}</span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+              <span className="font-medium text-blue-400 truncate">r/{post.subreddit}</span>
+              <span className="text-muted-foreground">•</span>
+              <span className="text-blue-300">u/{post.author}</span>
             </div>
             <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${sentimentTone(post._sentiment)}`}>
               {post._sentiment || 'neutral'}
@@ -330,18 +330,18 @@ const PostCard = ({
           </div>
 
           {/* Timestamp */}
-          <div className="text-[10px] text-slate-400 mb-1.5">
+          <div className="text-[10px] text-muted-foreground mb-1.5">
             {formatTimestamp(post.created_utc)}
           </div>
 
           {/* Title */}
-          <h3 className="text-sm font-semibold text-slate-800 line-clamp-2 mb-1.5 group-hover:text-blue-700 transition-colors">
+          <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors">
             {post.title}
           </h3>
 
           {/* Body Preview */}
           {post.selftext && (
-            <p className="text-xs text-slate-500 line-clamp-2 mb-2">
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
               {post.selftext}
             </p>
           )}
@@ -361,7 +361,7 @@ const PostCard = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border">
             <div className="flex items-center gap-2">
               {/* XAI Button - requests deep analysis if not done yet */}
               <Button
@@ -416,7 +416,7 @@ const PostCard = ({
 
 // Loading Skeleton for Post Cards
 const PostCardSkeleton = () => (
-  <div className="rounded-lg border border-slate-200 bg-white p-3">
+  <div className="rounded-lg border border-border bg-card p-3">
     <div className="flex items-start gap-2.5">
       <Skeleton className="w-7 h-7 rounded-full flex-shrink-0" />
       <div className="flex-1 space-y-2">
@@ -931,7 +931,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Keyword Analysis</h2>
+          <h2 className="text-2xl font-bold text-foreground">Keyword Analysis</h2>
           <p className="text-muted-foreground text-sm">
             Track keywords across Reddit and analyze sentiment patterns
           </p>
@@ -944,7 +944,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       </div>
 
       {/* Search Bar */}
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="border-border shadow-sm">
         <CardContent className="p-4">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
@@ -953,7 +953,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleKeywordAnalysis()}
-                className="pr-10 h-10 border-slate-200"
+                className="pr-10 h-10 border-border bg-background text-foreground"
               />
               {keyword && (
                 <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setKeyword('')}>
@@ -976,14 +976,14 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
         <>
           {/* Stats Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="border-slate-200 shadow-sm">
+            <Card className="border-border shadow-sm">
               <CardContent className="p-3 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
                   <Hash className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-slate-900">{keywordData.totalMentions}</div>
-                  <div className="text-xs text-slate-500">Total Mentions</div>
+                  <div className="text-2xl font-bold text-foreground">{keywordData.totalMentions}</div>
+                  <div className="text-xs text-muted-foreground">Total Mentions</div>
                 </div>
               </CardContent>
             </Card>
@@ -993,8 +993,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                   <Sparkles className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-slate-900">{getSentimentPercentage('positive')}%</div>
-                  <div className="text-xs text-slate-500">Positive</div>
+                  <div className="text-2xl font-bold text-foreground">{getSentimentPercentage('positive')}%</div>
+                  <div className="text-xs text-muted-foreground">Positive</div>
                 </div>
               </CardContent>
             </Card>
@@ -1004,8 +1004,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                   <Activity className="h-5 w-5 text-slate-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-slate-900">{getSentimentPercentage('neutral')}%</div>
-                  <div className="text-xs text-slate-500">Neutral</div>
+                  <div className="text-2xl font-bold text-foreground">{getSentimentPercentage('neutral')}%</div>
+                  <div className="text-xs text-muted-foreground">Neutral</div>
                 </div>
               </CardContent>
             </Card>
@@ -1015,8 +1015,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                   <TrendingUp className="h-5 w-5 text-red-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-slate-900">{getSentimentPercentage('negative')}%</div>
-                  <div className="text-xs text-slate-500">Negative</div>
+                  <div className="text-2xl font-bold text-foreground">{getSentimentPercentage('negative')}%</div>
+                  <div className="text-xs text-muted-foreground">Negative</div>
                 </div>
               </CardContent>
             </Card>
@@ -1026,8 +1026,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
           <div className="grid grid-cols-1 lg:grid-cols-10 gap-5">
             {/* === LEFT: UNIFIED INTELLIGENCE FEED (70%) === */}
             <div className="lg:col-span-7">
-              <Card className="border-slate-200 shadow-sm h-full">
-                <CardHeader className="pb-3 border-b border-slate-100">
+              <Card className="border-border shadow-sm h-full">
+                <CardHeader className="pb-3 border-b border-border">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Target className="h-4 w-4 text-blue-600" />
@@ -1069,7 +1069,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                           />
                         ))
                       ) : (
-                        <div className="text-center text-sm text-slate-400 py-12 border border-dashed border-slate-200 rounded-lg">
+                        <div className="text-center text-sm text-muted-foreground py-12 border border-dashed border-border rounded-lg">
                           <MessageSquare className="h-8 w-8 mx-auto mb-2 text-slate-300" />
                           <p>No posts match the current filters</p>
                           {activeSentiment && activeSentiment !== 'all' && (
@@ -1194,8 +1194,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
           {/* === SECOND ROW: FULL WIDTH === */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Keyword Intelligence */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-2.5 border-b border-slate-100">
+            <Card className="border-border shadow-sm">
+              <CardHeader className="pb-2.5 border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Hash className="h-4 w-4 text-blue-600" /> Keyword Intelligence
                 </CardTitle>
@@ -1240,8 +1240,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
             </Card>
 
             {/* Top Users Using Keyword */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="pb-2.5 border-b border-slate-100">
+            <Card className="border-border shadow-sm">
+              <CardHeader className="pb-2.5 border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-sm">
                   <Users className="h-4 w-4 text-blue-600" /> Top Users Using Keyword
                 </CardTitle>
@@ -1252,7 +1252,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                     {topUsers.map((user, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors group"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600 flex-shrink-0">
@@ -1269,7 +1269,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                           </a>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                          <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                             <div
                               className="h-full bg-blue-500 rounded-full"
                               style={{ width: `${(user.count / topUsers[0].count) * 100}%` }}
@@ -1332,7 +1332,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
         <>
           {savedKeywords.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-slate-600">Previously Analyzed Keywords</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Previously Analyzed Keywords</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {savedKeywords.map((item) => {
                   const mentions = ((item.result_data as any)?.totalMentions ?? 0).toLocaleString();
@@ -1365,19 +1365,19 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
 
                       {/* Stats */}
                       <div className="px-4 pt-2 pb-3">
-                        <div className="text-center p-2 rounded-lg bg-slate-50 border border-slate-200 mb-2">
-                          <p className="text-lg font-extrabold text-slate-900 leading-none">{mentions}</p>
-                          <p className="text-[9px] text-slate-500 font-semibold uppercase tracking-widest mt-0.5">Mentions</p>
+                        <div className="text-center p-2 rounded-lg bg-muted border border-border mb-2">
+                          <p className="text-lg font-extrabold text-foreground leading-none">{mentions}</p>
+                          <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-widest mt-0.5">Mentions</p>
                         </div>
                         {item.analyzed_at && (
-                          <p className="text-[10px] text-slate-500 text-center">
+                          <p className="text-[10px] text-muted-foreground text-center">
                             {new Date(item.analyzed_at).toLocaleDateString()}
                           </p>
                         )}
                       </div>
 
                       {/* Footer */}
-                      <div className="flex border-t border-slate-100">
+                      <div className="flex border-t border-border">
                         <Button variant="ghost" size="sm" className="flex-1 rounded-none text-xs h-9 hover:bg-slate-50"
                           onClick={(e) => { e.stopPropagation(); loadSavedKeyword(item); }}>
                           <Search className="h-3.5 w-3.5 mr-1" /> View
@@ -1397,11 +1397,11 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
           )}
 
           {savedKeywords.length === 0 && (
-            <Card className="border-dashed border-slate-300 bg-slate-50/50">
+            <Card className="border-dashed border-border bg-card/50">
               <CardContent className="py-12 text-center">
-                <Hash className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500 text-sm">Enter a keyword to perform detailed analysis</p>
-                <p className="text-slate-400 text-xs mt-1">Previous analyses will appear here</p>
+                <Hash className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                <p className="text-muted-foreground text-sm">Enter a keyword to perform detailed analysis</p>
+                <p className="text-muted-foreground/70 text-xs mt-1">Previous analyses will appear here</p>
               </CardContent>
             </Card>
           )}

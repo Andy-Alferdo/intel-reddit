@@ -456,20 +456,20 @@ const CommunityAnalysis = () => {
                       </div>
                       {/* Reddit-style Voting Bar */}
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-1">
+                        <div className="flex items-center gap-1 bg-muted rounded-full px-2 py-1">
                           <button 
-                            className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-orange-500 transition-colors"
+                            className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-orange-500 transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M12 4l-8 8h16l-8-8z"/>
                             </svg>
                           </button>
-                          <span className="text-[11px] font-semibold text-slate-700 min-w-[1.5rem] text-center">
+                          <span className="text-[11px] font-semibold text-foreground min-w-[1.5rem] text-center">
                             {post.score >= 1000 ? (post.score / 1000).toFixed(1) + 'K' : post.score || 0}
                           </span>
                           <button 
-                            className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-blue-500 transition-colors"
+                            className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-blue-400 transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -517,20 +517,20 @@ const CommunityAnalysis = () => {
                         <h4 className="font-medium text-sm leading-tight line-clamp-2">{post.title}</h4>
                         {/* Reddit-style Voting Bar */}
                         <div className="flex items-center gap-2 mt-2">
-                          <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-1">
+                          <div className="flex items-center gap-1 bg-muted rounded-full px-2 py-1">
                             <button 
-                              className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-orange-500 transition-colors"
+                              className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-orange-500 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 4l-8 8h16l-8-8z"/>
                               </svg>
                             </button>
-                            <span className="text-[11px] font-semibold text-slate-700 min-w-[1.5rem] text-center">
+                            <span className="text-[11px] font-semibold text-foreground min-w-[1.5rem] text-center">
                               {post.score >= 1000 ? (post.score / 1000).toFixed(1) + 'K' : post.score || 0}
                             </span>
                             <button 
-                              className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-blue-500 transition-colors"
+                              className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-blue-400 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
