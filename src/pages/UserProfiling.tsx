@@ -69,15 +69,15 @@ const TREEMAP_COLORS = [
 ];
 
 // Premium Explanation Component
-const PremiumExplanation = ({ 
-  sentiment, 
-  confidence, 
-  explanation, 
-  contributions = [], 
-  isExpanded, 
-  onToggleExpand, 
+const PremiumExplanation = ({
+  sentiment,
+  confidence,
+  explanation,
+  contributions = [],
+  isExpanded,
+  onToggleExpand,
   onShowOriginal,
-  isAnalyzing 
+  isAnalyzing
 }: {
   sentiment: 'positive' | 'negative' | 'neutral';
   confidence?: number;
@@ -103,7 +103,7 @@ const PremiumExplanation = ({
   // Smart token filtering - remove common stopwords unless important
   const filterTokens = (tokens: any[]) => {
     const stopWords = new Set(['is', 'in', 'the', 'a', 'an', 'we', 'this', 'that', 'has', 'are', 'was', 'were', 'been', 'have', 'had', 'do', 'does', 'did', 'but', 'or', 'and', 'for', 'to', 'of', 'with', 'by', 'at', 'on']);
-    
+
     return tokens
       .filter(token => {
         const score = Math.abs(token.contribution || token.score || token.weight || token.value || 0);
@@ -158,7 +158,7 @@ const PremiumExplanation = ({
   const filteredTokens = filterTokens(contributions);
   const topTokens = filteredTokens.slice(0, 5);
   const confidenceValue = confidence;
-  const maxContribution = topTokens.length > 0 
+  const maxContribution = topTokens.length > 0
     ? Math.max(...topTokens.map(t => Math.abs(t.contribution || t.score || t.weight || t.value || 0)))
     : 1;
 
@@ -191,7 +191,7 @@ const PremiumExplanation = ({
               {topTokens.map((token, i) => {
                 const score = token.contribution || token.score || token.weight || token.value || 0;
                 const barWidth = maxContribution > 0 ? (Math.abs(score) / maxContribution) * 100 : 0;
-                
+
                 return (
                   <div key={i} className="flex items-center gap-2">
                     <span className="text-xs font-medium text-foreground w-16 truncate">{token.word}</span>
@@ -284,15 +284,15 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   // Custom content renderer for Treemap
   const CustomTreemapContent = (props: any) => {
     const { x, y, width, height, name, size, fill } = props;
-    
+
     // Hide labels if block is too small
     const showLabel = width > 40 && height > 30;
     const showCount = width > 50 && height > 45;
-    
+
     // Calculate font sizes based on block size
     const nameFontSize = Math.max(8, Math.min(14, width / 8));
     const countFontSize = Math.max(7, Math.min(11, width / 10));
-    
+
     // Handle click to open Reddit URL
     const handleRectClick = () => {
       const cleanName = name.replace('r/', '');
@@ -354,14 +354,14 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
         <Treemap
           data={[{ children: treemapData }]}
           dataKey="size"
-          aspectRatio={4/3}
+          aspectRatio={4 / 3}
           stroke="#fff"
           content={<CustomTreemapContent />}
           animationBegin={0}
           animationDuration={800}
           animationEasing="ease-in-out"
         >
-          <RTooltip 
+          <RTooltip
             content={({ active, payload }) => {
               if (active && payload && payload.length) {
                 const data = payload[0].payload;
@@ -399,15 +399,15 @@ const UserProfiling = () => {
   const { toast } = useToast();
   const { addUserProfile, saveUserProfileToDb, saveRedditContentToDb, currentCase } = useInvestigation();
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
-  
+
   // Per-item deep analysis state
   const [deepAnalysisStates, setDeepAnalysisStates] = useState<Map<string, { isAnalyzing: boolean; result: any; showDeep: boolean; analysisType?: 'lime' | 'shap' }>>(new Map());
 
   const handleDeepAnalysis = async (text: string, itemKey: string) => {
     // Update state for this specific item
-    setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
-      isAnalyzing: true, 
-      result: null, 
+    setDeepAnalysisStates(prev => new Map(prev.set(itemKey, {
+      isAnalyzing: true,
+      result: null,
       showDeep: false,
       analysisType: 'lime'
     })));
@@ -427,9 +427,9 @@ const UserProfiling = () => {
       };
 
       // Update state with result
-      setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
-        isAnalyzing: false, 
-        result, 
+      setDeepAnalysisStates(prev => new Map(prev.set(itemKey, {
+        isAnalyzing: false,
+        result,
         showDeep: true,
         analysisType: 'lime'
       })));
@@ -440,14 +440,14 @@ const UserProfiling = () => {
       });
     } catch (error) {
       console.error('Deep analysis error:', error);
-      
+
       // Reset state for this item on error
       setDeepAnalysisStates(prev => {
         const newMap = new Map(prev);
         newMap.delete(itemKey);
         return newMap;
       });
-      
+
       toast({
         title: "Deep Analysis Failed",
         description: "Could not perform deep analysis. Please try again.",
@@ -460,9 +460,9 @@ const UserProfiling = () => {
     setDeepAnalysisStates(prev => {
       const current = prev.get(itemKey);
       if (current) {
-        return new Map(prev.set(itemKey, { 
-          ...current, 
-          showDeep: !current.showDeep 
+        return new Map(prev.set(itemKey, {
+          ...current,
+          showDeep: !current.showDeep
         }));
       }
       return prev;
@@ -473,7 +473,7 @@ const UserProfiling = () => {
   const fetchSavedProfiles = useCallback(async () => {
     try {
       let data, error;
-      
+
       if (currentCase?.id) {
         // Filter by case_id if a case is selected
         const result = await supabase
@@ -494,11 +494,11 @@ const UserProfiling = () => {
         data = result.data;
         error = result.error;
       }
-      
+
       if (error) {
         console.error('Error fetching profiles:', error);
       }
-      
+
       // Fetch avatars for each profile
       if (data) {
         const profilesWithAvatars = await Promise.all(
@@ -508,8 +508,8 @@ const UserProfiling = () => {
               const redditResponse = await fetch(`https://www.reddit.com/user/${profile.username}/about.json`);
               if (redditResponse.ok) {
                 const redditData = await redditResponse.json();
-                avatarUrl = redditData.data?.icon_img 
-                  || redditData.data?.subreddit?.icon_img 
+                avatarUrl = redditData.data?.icon_img
+                  || redditData.data?.subreddit?.icon_img
                   || redditData.data?.snoovatar_img
                   || null;
                 if (avatarUrl) {
@@ -526,7 +526,7 @@ const UserProfiling = () => {
       } else {
         setSavedProfiles([]);
       }
-    } catch (e) { 
+    } catch (e) {
       console.error('Exception fetching profiles:', e);
     }
   }, [currentCase?.id]);
@@ -555,21 +555,21 @@ const UserProfiling = () => {
         .maybeSingle();
       if (err) throw err;
       if (!data) throw new Error('Profile not found');
-      
+
       console.log('Loading saved profile data:', data);
-      
+
       setUsername(data.username || '');
       const postSentiments = (data.post_sentiments as any[]) || [];
       const commentSentiments = (data.comment_sentiments as any[]) || [];
-      
+
       // Try to fetch fresh avatar from Reddit API
       let avatarUrl = null;
       try {
         const redditResponse = await fetch(`https://www.reddit.com/user/${data.username}/about.json`);
         if (redditResponse.ok) {
           const redditData = await redditResponse.json();
-          avatarUrl = redditData.data?.icon_img 
-            || redditData.data?.subreddit?.icon_img 
+          avatarUrl = redditData.data?.icon_img
+            || redditData.data?.subreddit?.icon_img
             || redditData.data?.snoovatar_img
             || null;
           if (avatarUrl) {
@@ -579,7 +579,7 @@ const UserProfiling = () => {
       } catch (e) {
         // Silently fail if we can't fetch avatar
       }
-      
+
       // Calculate sentiment analysis from post and comment sentiments if not in database
       const calculateSentimentAnalysis = (posts: any[], comments: any[]) => {
         const allSentiments = [...posts, ...comments];
@@ -587,9 +587,9 @@ const UserProfiling = () => {
         const negative = allSentiments.filter(s => s.sentiment === 'negative').length;
         const neutral = allSentiments.filter(s => s.sentiment === 'neutral').length;
         const total = allSentiments.length;
-        
+
         if (total === 0) return { positive: 33, neutral: 34, negative: 33 };
-        
+
         return {
           positive: Math.round((positive / total) * 100),
           neutral: Math.round((neutral / total) * 100),
@@ -603,9 +603,9 @@ const UserProfiling = () => {
         const negative = items.filter(s => s.sentiment === 'negative').length;
         const neutral = items.filter(s => s.sentiment === 'neutral').length;
         const total = items.length;
-        
+
         if (total === 0) return { positive: 33, neutral: 34, negative: 33 };
-        
+
         return {
           positive: Math.round((positive / total) * 100),
           neutral: Math.round((neutral / total) * 100),
@@ -616,7 +616,7 @@ const UserProfiling = () => {
       // Generate monthly activity from saved posts and comments
       const generateMonthlyActivity = (posts: any[], comments: any[]) => {
         const monthMap = new Map<string, { posts: number; comments: number }>();
-        
+
         // Process posts
         posts.forEach(post => {
           if (post.created_utc) {
@@ -627,7 +627,7 @@ const UserProfiling = () => {
             monthMap.set(monthKey, existing);
           }
         });
-        
+
         // Process comments
         comments.forEach(comment => {
           if (comment.created_utc) {
@@ -638,13 +638,13 @@ const UserProfiling = () => {
             monthMap.set(monthKey, existing);
           }
         });
-        
+
         // Convert to sorted array (most recent first)
         const monthlyActivity = Array.from(monthMap.entries())
           .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
           .slice(-12) // Last 12 months
           .map(([name, counts]) => ({ name, posts: counts.posts, comments: counts.comments }));
-        
+
         return monthlyActivity;
       };
 
@@ -671,7 +671,7 @@ const UserProfiling = () => {
         isPrivateProfile: (data as any).is_private_profile || false,
         dataSource: (data as any).data_source || 'oauth',
       };
-      
+
       console.log('Setting profile data:', profileDataToSet);
       setProfileData(profileDataToSet);
     } catch (e: any) {
@@ -699,19 +699,19 @@ const UserProfiling = () => {
     const prefillUsername = (location.state as any)?.prefillUsername as string | undefined;
     if (prefillUsername) {
       setUsername(prefillUsername);
-      
+
       // Check if profile already exists
-      const existingProfile = savedProfiles.find(p => 
+      const existingProfile = savedProfiles.find(p =>
         p.username.toLowerCase() === prefillUsername.toLowerCase()
       );
-      
+
       if (existingProfile) {
         // User already analyzed - show message and load existing profile
         toast({
           title: "Profile already analyzed",
           description: `u/${prefillUsername} has already been analyzed. Showing existing profile.`,
         });
-        
+
         // Load the existing profile
         setTimeout(() => {
           loadSavedProfile(existingProfile.id);
@@ -833,23 +833,23 @@ const UserProfiling = () => {
 
   const handleAnalyzeUser = async () => {
     if (!username.trim()) return;
-    
+
     // Clean username (remove u/ prefix if present)
     const cleanUsername = username.replace(/^u\//, '');
-    
+
     // Check if profile already exists
-    const existingProfile = savedProfiles.find(p => 
+    const existingProfile = savedProfiles.find(p =>
       p.username.toLowerCase() === cleanUsername.toLowerCase()
     );
-    
+
     if (existingProfile) {
       // Profile already analyzed - show message and load it
       toast({
         title: "Profile Already Analyzed",
         description: `Profile for u/${cleanUsername} was already analyzed. Loading existing analysis...`,
         action: (
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             onClick={() => loadSavedProfile(existingProfile.id)}
             className="bg-blue-600 hover:bg-blue-700"
           >
@@ -857,12 +857,12 @@ const UserProfiling = () => {
           </Button>
         ),
       });
-      
+
       // Load the existing profile
       loadSavedProfile(existingProfile.id);
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
     setProfileData(null);
@@ -874,10 +874,10 @@ const UserProfiling = () => {
     try {
       console.log('Fetching Reddit data for user:', cleanUsername);
       setTargetProgress(30);
-      
+
       // Fetch user data from Reddit
       const { data: redditData, error: redditError } = await supabase.functions.invoke('reddit-scraper', {
-        body: { 
+        body: {
           username: cleanUsername,
           type: 'user'
         }
@@ -928,19 +928,19 @@ const UserProfiling = () => {
       const allContent = [...(redditData.posts || []), ...(redditData.comments || [])];
       const hourCounts: { [key: number]: number } = {};
       const dayCounts: { [key: string]: number } = {};
-      
+
       allContent.forEach((item: any) => {
         const date = new Date(item.created_utc * 1000);
         const pakistanDate = toZonedTime(date, 'Asia/Karachi');
         const hour = pakistanDate.getHours();
         const day = pakistanDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Karachi' });
-        
+
         hourCounts[hour] = (hourCounts[hour] || 0) + 1;
         dayCounts[day] = (dayCounts[day] || 0) + 1;
       });
 
-      const mostActiveHour = Object.entries(hourCounts).sort(([,a], [,b]) => b - a)[0];
-      const mostActiveDay = Object.entries(dayCounts).sort(([,a], [,b]) => b - a)[0];
+      const mostActiveHour = Object.entries(hourCounts).sort(([, a], [, b]) => b - a)[0];
+      const mostActiveDay = Object.entries(dayCounts).sort(([, a], [, b]) => b - a)[0];
 
       // Generate word cloud from content
       const textContent = [
@@ -957,7 +957,7 @@ const UserProfiling = () => {
       });
 
       const wordCloudData = Object.entries(wordFreq)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 40)
         .map(([word, freq]) => ({
           word,
@@ -968,11 +968,11 @@ const UserProfiling = () => {
       // Store raw posts/comments with their timestamps for timeline
       const rawPosts = redditData.posts || [];
       const rawComments = redditData.comments || [];
-      
+
       // Calculate monthly activity for timeline
       const monthlyActivity: { name: string; posts: number; comments: number }[] = [];
       const monthMap = new Map<string, { posts: number; comments: number }>();
-      
+
       [...rawPosts, ...rawComments].forEach((item: any) => {
         const date = new Date(item.created_utc * 1000);
         const monthKey = format(date, 'MMM yyyy');
@@ -986,7 +986,7 @@ const UserProfiling = () => {
           entry.comments++;
         }
       });
-      
+
       // Convert to sorted array (most recent first)
       Array.from(monthMap.entries())
         .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
@@ -996,11 +996,11 @@ const UserProfiling = () => {
         });
 
       // Extract avatar from multiple possible sources
-      const avatarUrl = redditData.user?.icon_img 
-        || redditData.user?.subreddit?.icon_img 
+      const avatarUrl = redditData.user?.icon_img
+        || redditData.user?.subreddit?.icon_img
         || redditData.user?.snoovatar_img
         || null;
-      
+
       // Fix any URL encoding issues (Reddit sometimes returns escaped URLs)
       const cleanAvatarUrl = avatarUrl ? avatarUrl.replace(/&amp;/g, '&') : null;
 
@@ -1015,7 +1015,7 @@ const UserProfiling = () => {
         commentKarma: redditData.user.comment_karma,
         activeSubreddits: analysisData?.topSubreddits || [],
         activityPattern: {
-          mostActiveHour: mostActiveHour ? `${mostActiveHour[0]}:00-${parseInt(mostActiveHour[0])+1}:00 PKT` : 'N/A',
+          mostActiveHour: mostActiveHour ? `${mostActiveHour[0]}:00-${parseInt(mostActiveHour[0]) + 1}:00 PKT` : 'N/A',
           mostActiveDay: mostActiveDay?.[0] || 'N/A',
           timezone: 'PKT (Pakistan Standard Time)',
         },
@@ -1053,7 +1053,7 @@ const UserProfiling = () => {
 
       setProfileData(profileResult);
       setTargetProgress(100);
-      
+
       // Save to investigation context for report generation
       const profileToSave = {
         username: cleanUsername,
@@ -1076,9 +1076,9 @@ const UserProfiling = () => {
         isPrivateProfile: profileResult.isPrivateProfile,
         dataSource: profileResult.dataSource,
       };
-      
+
       addUserProfile(profileToSave);
-      
+
       // Also save to database if there's an active case
       if (currentCase?.id) {
         try {
@@ -1089,7 +1089,7 @@ const UserProfiling = () => {
             .eq('case_id', currentCase.id)
             .eq('username', cleanUsername)
             .maybeSingle();
-          
+
           if (existingProfile) {
             // Update existing profile
             const { error: updateError } = await supabase
@@ -1111,7 +1111,7 @@ const UserProfiling = () => {
                 analyzed_at: new Date().toISOString(),
               })
               .eq('id', existingProfile.id);
-            
+
             if (updateError) throw updateError;
             console.log('Updated existing profile in database');
           } else {
@@ -1119,13 +1119,13 @@ const UserProfiling = () => {
             await saveUserProfileToDb(profileToSave);
             console.log('Created new profile in database');
           }
-          
+
           // Also save individual posts and comments to database
           // Save posts and comments to database using shared saver
           try {
             const result = await saveRedditContentToDb(
-              redditData.posts || [], 
-              redditData.comments || [], 
+              redditData.posts || [],
+              redditData.comments || [],
               'user_profile'
             );
             console.log(`User Profiling: Saved ${result.totalInserted} Reddit items to database`);
@@ -1133,7 +1133,7 @@ const UserProfiling = () => {
             console.error('User Profiling: Failed to save Reddit content:', error);
             // Don't block the UI, just log the error
           }
-          
+
           // Refresh saved profiles list to show updated data
           fetchSavedProfiles();
         } catch (dbErr) {
@@ -1213,7 +1213,7 @@ const UserProfiling = () => {
 
   const renderSentimentRow = (item: any, itemKey: string, isPost: boolean) => {
     const deepState = deepAnalysisStates.get(itemKey);
-    
+
     // Get contributions from deep analysis or basic analysis
     const getContributions = () => {
       if (deepState?.showDeep && deepState.result) {
@@ -1231,50 +1231,50 @@ const UserProfiling = () => {
         const probs = item.sentiment_probabilities;
         let maxProb = 0;
         let maxClass = item.sentiment; // fallback to current sentiment
-        
+
         Object.entries(probs).forEach(([sentiment, prob]) => {
           if (typeof prob === 'number' && prob > maxProb) {
             maxProb = prob;
             maxClass = sentiment;
           }
         });
-        
+
         return maxClass;
       }
-      
+
       // Check class probabilities
       if (item.class_probabilities) {
         const probs = item.class_probabilities;
         let maxProb = 0;
         let maxClass = item.sentiment; // fallback
-        
+
         Object.entries(probs).forEach(([sentiment, prob]) => {
           if (typeof prob === 'number' && prob > maxProb) {
             maxProb = prob;
             maxClass = sentiment;
           }
         });
-        
+
         return maxClass;
       }
-      
+
       // Check predict_proba array
       if (item.predict_proba && Array.isArray(item.predict_proba) && item.classes) {
         const probs = item.predict_proba;
         const classes = item.classes;
         let maxProb = 0;
         let maxClass = item.sentiment; // fallback
-        
+
         probs.forEach((prob, index) => {
           if (typeof prob === 'number' && prob > maxProb && classes[index]) {
             maxProb = prob;
             maxClass = classes[index];
           }
         });
-        
+
         return maxClass;
       }
-      
+
       // Return current sentiment as fallback
       return item.sentiment;
     };
@@ -1282,20 +1282,20 @@ const UserProfiling = () => {
     // Get confidence score - ensure it's always between 0 and 1
     const getConfidence = () => {
       let confidence = null;
-      
+
       // Try to get confidence from deep analysis result
       if (deepState?.result) {
-        confidence = deepState.result.confidence || 
-                   deepState.result.sentiment_confidence || 
-                   deepState.result.probability ||
-                   deepState.result.max_probability;
+        confidence = deepState.result.confidence ||
+          deepState.result.sentiment_confidence ||
+          deepState.result.probability ||
+          deepState.result.max_probability;
       }
-      
+
       // Try to get confidence from item itself
       if (confidence === null && item.confidence !== undefined && item.confidence !== null) {
         confidence = item.confidence;
       }
-      
+
       // Try to get from sentiment probabilities (use max probability)
       if (confidence === null && item.sentiment_probabilities) {
         const probs = Object.values(item.sentiment_probabilities).filter(p => typeof p === 'number') as number[];
@@ -1303,7 +1303,7 @@ const UserProfiling = () => {
           confidence = Math.max(...probs);
         }
       }
-      
+
       // Try to get from predict_proba output
       if (confidence === null && item.predict_proba && Array.isArray(item.predict_proba)) {
         const probs = item.predict_proba.filter(p => typeof p === 'number') as number[];
@@ -1311,7 +1311,7 @@ const UserProfiling = () => {
           confidence = Math.max(...probs);
         }
       }
-      
+
       // Try to get from class probabilities
       if (confidence === null && item.class_probabilities) {
         const probs = Object.values(item.class_probabilities).filter(p => typeof p === 'number') as number[];
@@ -1319,14 +1319,14 @@ const UserProfiling = () => {
           confidence = Math.max(...probs);
         }
       }
-      
+
       // Validate and normalize confidence
       if (confidence !== null && confidence !== undefined) {
         // Ensure confidence is between 0 and 1
         confidence = Math.max(0, Math.min(1, confidence));
         return confidence;
       }
-      
+
       return null; // Return null if no valid confidence found
     };
 
@@ -1349,17 +1349,17 @@ const UserProfiling = () => {
       const confidence = getConfidence();
       const correctSentiment = getCorrectSentiment();
       const contributions = getContributions();
-      
+
       // Validate confidence
       if (confidence !== null && (confidence < 0 || confidence > 1)) {
         console.warn('Invalid confidence detected:', confidence, 'for item:', itemKey);
       }
-      
+
       // Validate sentiment consistency
       if (correctSentiment !== item.sentiment) {
         console.log('Sentiment correction applied:', item.sentiment, '->', correctSentiment, 'for item:', itemKey);
       }
-      
+
       // Validate contributions
       contributions.forEach((token, index) => {
         const score = token.contribution || token.score || token.weight || token.value || 0;
@@ -1367,7 +1367,7 @@ const UserProfiling = () => {
           console.log('Large contribution value normalized:', token.word, score, '->', Math.sign(score) * 0.15);
         }
       });
-      
+
       return { confidence, correctSentiment, contributions };
     };
 
@@ -1419,27 +1419,27 @@ const UserProfiling = () => {
             {/* Reddit-style Voting Bar */}
             <div className="flex items-center gap-3 mt-2 pt-2 border-t border-slate-100">
               <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-1">
-                <button 
+                <button
                   className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-orange-500 transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 4l-8 8h16l-8-8z"/>
+                    <path d="M12 4l-8 8h16l-8-8z" />
                   </svg>
                 </button>
                 <span className="text-[11px] font-semibold text-slate-700 min-w-[1.5rem] text-center">
                   {item.score >= 1000 ? (item.score / 1000).toFixed(1) + 'K' : item.score || 0}
                 </span>
-                <button 
+                <button
                   className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-blue-500 transition-colors"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 20l8-8H4l8 8z"/>
+                    <path d="M12 20l8-8H4l8 8z" />
                   </svg>
                 </button>
               </div>
-              
+
               {item.permalink && (
                 <Button
                   size="sm"
@@ -1462,643 +1462,643 @@ const UserProfiling = () => {
   };
 
   const sentimentPieData = (b: any) => {
-  console.log('Sentiment breakdown data:', b);
-  const data = b ? [
-    { name: 'Positive', value: Math.round((b.positive || 0) * 100), color: SENT_COLORS.positive },
-    { name: 'Neutral', value: Math.round((b.neutral || 0) * 100), color: SENT_COLORS.neutral },
-    { name: 'Negative', value: Math.round((b.negative || 0) * 100), color: SENT_COLORS.negative },
-  ].filter(item => item.value > 0) : [];
-  console.log('Processed pie data:', data);
-  return data;
-};
+    console.log('Sentiment breakdown data:', b);
+    const data = b ? [
+      { name: 'Positive', value: Math.round((b.positive || 0) * 100), color: SENT_COLORS.positive },
+      { name: 'Neutral', value: Math.round((b.neutral || 0) * 100), color: SENT_COLORS.neutral },
+      { name: 'Negative', value: Math.round((b.negative || 0) * 100), color: SENT_COLORS.negative },
+    ].filter(item => item.value > 0) : [];
+    console.log('Processed pie data:', data);
+    return data;
+  };
 
   return (
     <TooltipProvider>
-    <div className="p-6 space-y-5 relative bg-background min-h-screen">
-      {isLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60">
-          <div className="flex flex-col items-center gap-3 bg-card border border-border rounded-xl shadow-2xl px-8 py-6">
-            <LoadingSpinner text="Analyzing user profile..." size="md" targetProgress={targetProgress} />
+      <div className="p-6 space-y-5 relative bg-background min-h-screen">
+        {isLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60">
+            <div className="flex flex-col items-center gap-3 bg-card border border-border rounded-xl shadow-2xl px-8 py-6">
+              <LoadingSpinner text="Analyzing user profile..." size="md" targetProgress={targetProgress} />
+            </div>
           </div>
+        )}
+
+        {/* Page Header */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">User Profiling</h2>
+          <p className="text-muted-foreground">
+            Open-Source Reddit User Intelligence, Profiling & Behavior Mapping
+          </p>
         </div>
-      )}
 
-      {/* Page Header */}
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-foreground mb-2">User Profiling</h2>
-        <p className="text-muted-foreground">
-          Open-Source Reddit User Intelligence, Profiling & Behavior Mapping
-        </p>
-      </div>
-
-      {/* Search Bar */}
-      <Card className="border-border shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Input
-                id="username"
-                placeholder="Enter Reddit username (e.g. spez or u/spez)"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAnalyzeUser()}
-                className="pr-10 h-10 border-border"
-              />
-              {username && (
-                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setUsername('')}>
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            <Button
-              onClick={handleAnalyzeUser}
-              disabled={isLoading || !username.trim()}
-              data-profiling-search
-              className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Search className="h-4 w-4 mr-1.5" /> Analyze
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {profileData && (
-        <>
-          <Button variant="ghost" size="sm" className="gap-2 text-slate-600" onClick={() => { setProfileData(null); setError(null); }}>
-            <ArrowLeft className="h-4 w-4" /> Back to Overview
-          </Button>
-
-          {/* === PREMIUM PROFILE HEADER === */}
-          <Card className="border-border shadow-sm overflow-hidden bg-card">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-6">
-                {/* LEFT: Avatar + name */}
-                <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 rounded-full border-2 border-blue-100 shadow-sm overflow-hidden bg-gradient-to-br from-orange-500 to-rose-600 flex items-center justify-center">
-                    {profileData.avatar ? (
-                      <img 
-                        src={profileData.avatar} 
-                        alt={profileData.username} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <User className="h-7 w-7 text-white" />
-                    )}
-                  </div>
-                  <div>
-                    <a
-                      href={`https://www.reddit.com/user/${profileData.username}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="text-lg font-bold text-foreground hover:text-blue-600 inline-flex items-center gap-1.5"
-                    >
-                      u/{profileData.username}
-                      <ExternalLink className="h-3.5 w-3.5 opacity-60" />
-                    </a>
-                  </div>
-                </div>
-
-                <Separator orientation="vertical" className="h-14" />
-
-                {/* CENTER: Metrics - clean and balanced */}
-                <div className="flex-1 flex items-center justify-around">
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
-                      <ThumbsUp className="h-3 w-3" /> Karma
-                    </div>
-                    <div className="text-lg font-bold text-foreground">{(profileData.totalKarma || 0).toLocaleString()}</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
-                      <Calendar className="h-3 w-3" /> Account Age
-                    </div>
-                    <div className="text-sm font-bold text-foreground mt-0.5">{profileData.accountAge}</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
-                      <MessageSquare className="h-3 w-3" /> Posts
-                    </div>
-                    <div className="text-lg font-bold text-foreground">{(profileData.postsCount || 0).toLocaleString()}</div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
-                      <MessageCircle className="h-3 w-3" /> Comments
-                    </div>
-                    <div className="text-lg font-bold text-foreground">{(profileData.commentsCount || 0).toLocaleString()}</div>
-                  </div>
-                </div>
+        {/* Search Bar */}
+        <Card className="border-border shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Input
+                  id="username"
+                  placeholder="Enter Reddit username (e.g. spez or u/spez)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAnalyzeUser()}
+                  className="pr-10 h-10 border-border"
+                />
+                {username && (
+                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setUsername('')}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* === MAIN GRID: 70/30 === */}
-          <div className="grid grid-cols-1 lg:grid-cols-10 gap-5">
-            {/* === LEFT: UNIFIED INTELLIGENCE FEED (70%) === */}
-            <div className="lg:col-span-7">
-              <Card className="border-border shadow-sm h-full">
-                <CardHeader className="pb-3 border-b border-slate-100">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Target className="h-4 w-4 text-blue-600" />
-                      Unified Intelligence Feed
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Posts</span>
-                        <Select value={postsSort} onValueChange={(v) => setPostsSort(v as any)}>
-                          <SelectTrigger className="h-8 w-[110px] text-xs border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="recent" className="text-xs">Recent</SelectItem>
-                            <SelectItem value="top" className="text-xs">Top</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Comments</span>
-                        <Select value={commentsSort} onValueChange={(v) => setCommentsSort(v as any)}>
-                          <SelectTrigger className="h-8 w-[110px] text-xs border-border">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="recent" className="text-xs">Recent</SelectItem>
-                            <SelectItem value="top" className="text-xs">Top</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Posts */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2.5 px-1">
-                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                          {postsSort === 'top' ? 'Top Posts' : 'Recent Posts'}
-                        </h4>
-                        <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-500 px-1.5 py-0">
-                          {sortedPosts.length}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 max-h-[700px] overflow-y-auto pr-1">
-                        {sortedPosts.length > 0 ? (
-                          <>
-                            {sortedPosts.slice(0, visiblePosts).map((item: any, i: number) => renderSentimentRow(item, `post-${postsSort}-${i}`, true))}
-                            {sortedPosts.length > visiblePosts && (
-                              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVisiblePosts(p => p + 10)}>
-                                <ChevronDown className="h-3 w-3 mr-1" /> See {sortedPosts.length - visiblePosts} more
-                              </Button>
-                            )}
-                          </>
-                        ) : (
-                          <div className="text-center text-xs text-slate-400 py-8 border border-dashed border-slate-200 rounded">
-                            No posts available
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Comments */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2.5 px-1">
-                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                          {commentsSort === 'top' ? 'Top Comments' : 'Recent Comments'}
-                        </h4>
-                        <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-500 px-1.5 py-0">
-                          {sortedComments.length}
-                        </Badge>
-                      </div>
-                      <div className="space-y-2 max-h-[700px] overflow-y-auto pr-1">
-                        {sortedComments.length > 0 ? (
-                          <>
-                            {sortedComments.slice(0, visibleComments).map((item: any, i: number) => renderSentimentRow(item, `comment-${commentsSort}-${i}`, false))}
-                            {sortedComments.length > visibleComments && (
-                              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVisibleComments(p => p + 10)}>
-                                <ChevronDown className="h-3 w-3 mr-1" /> See {sortedComments.length - visibleComments} more
-                              </Button>
-                            )}
-                          </>
-                        ) : profileData?.isPrivateProfile ? (
-                          <div className="text-center text-xs text-amber-600 py-8 border border-dashed border-amber-200 rounded bg-amber-50/50">
-                            <AlertCircle className="h-4 w-4 mx-auto mb-1 text-amber-500" />
-                            Comments not fetched due to Reddit's Security Policy
-                          </div>
-                        ) : (
-                          <div className="text-center text-xs text-slate-400 py-8 border border-dashed border-slate-200 rounded">
-                            No comments available
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <Button
+                onClick={handleAnalyzeUser}
+                disabled={isLoading || !username.trim()}
+                data-profiling-search
+                className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Search className="h-4 w-4 mr-1.5" /> Analyze
+              </Button>
             </div>
-
-            {/* === RIGHT SIDEBAR (30%) === */}
-            <div className="lg:col-span-3 space-y-5">
-              {/* Behavioral Intelligence */}
-              <Card className="border-border shadow-sm">
-                <CardHeader className="pb-2.5 border-b border-slate-100">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Activity className="h-4 w-4 text-blue-600" /> Behavioral Intelligence
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-2.5 text-xs">
-                  {[
-                    { label: 'Most Active Hour', value: profileData.activityPattern.mostActiveHour, icon: Clock },
-                    { label: 'Most Active Day', value: profileData.activityPattern.mostActiveDay, icon: Calendar },
-                    { label: 'Posting Frequency', value: `${(((profileData.postsCount || 0) + (profileData.commentsCount || 0)) / Math.max(1, (profileData.monthlyActivity?.length || 1))).toFixed(1)} / month`, icon: TrendingUp },
-                    { label: 'Avg Engagement', value: `${Math.round((profileData.totalKarma || 0) / Math.max(1, (profileData.postsCount || 0) + (profileData.commentsCount || 0)))} karma/item`, icon: ThumbsUp },
-                    { label: 'Estimated Timezone', value: profileData.activityPattern.timezone, icon: Globe },
-                  ].map((row, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 last:border-0">
-                      <div className="flex items-center gap-1.5 text-slate-500">
-                        <row.icon className="h-3 w-3" />
-                        <span>{row.label}</span>
-                      </div>
-                      <span className="font-semibold text-foreground text-right truncate max-w-[55%]">{row.value}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Possible Location Indicators */}
-              <Card className="border-border shadow-sm">
-                <CardHeader className="pb-2.5 border-b border-slate-100">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-blue-600" /> Possible Location Indicators
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3 w-3 text-slate-400 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs text-xs">AI-detected location signals from posts, comments, and language patterns.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-1.5">
-                  {(profileData.locationIndicators || []).slice(0, 6).map((loc: string, i: number) => (
-                    <div key={i} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-muted border border-border">
-                      <MapPin className="h-3 w-3 text-blue-500 flex-shrink-0" />
-                      <span className="text-slate-700 truncate">{loc}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Dual Sentiment Charts */}
-              <Card className="border-border shadow-sm">
-                <CardHeader className="pb-2.5 border-b border-slate-100">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <BarChart3 className="h-4 w-4 text-blue-600" /> Sentiment Distribution
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Posts Chart */}
-                    <div className="text-center">
-                      <div className="text-[10px] font-semibold text-slate-600 uppercase mb-1">Posts</div>
-                      {sentimentPieData(profileData.postSentimentBreakdown).length > 0 ? (
-                        <ResponsiveContainer width="100%" height={110}>
-                          <PieChart>
-                            <Pie 
-                              data={sentimentPieData(profileData.postSentimentBreakdown)} 
-                              dataKey="value" 
-                              cx="50%" 
-                              cy="50%" 
-                              innerRadius={26} 
-                              outerRadius={45} 
-                              paddingAngle={2}
-                              onClick={(data) => {
-                                const sentiment = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
-                                setPostSentimentFilter(prev => prev === sentiment ? null : sentiment);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              {sentimentPieData(profileData.postSentimentBreakdown).map((d, i) => (
-                                <Cell 
-                                  key={i} 
-                                  fill={d.color} 
-                                  stroke={postSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
-                                  strokeWidth={postSentimentFilter === d.name.toLowerCase() ? 3 : 0}
-                                  opacity={postSentimentFilter && postSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
-                                />
-                              ))}
-                            </Pie>
-                            <RTooltip formatter={(v: any) => `${v}%`} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-[110px] flex items-center justify-center text-[10px] text-slate-400">No data</div>
-                      )}
-                      {postSentimentFilter && (
-                        <div className="text-[9px] text-blue-600 font-medium mt-1">
-                          Filter: {postSentimentFilter}
-                          <button 
-                            onClick={() => setPostSentimentFilter(null)}
-                            className="ml-1 text-slate-400 hover:text-slate-600 underline"
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Comments Chart */}
-                    <div className="text-center">
-                      <div className="text-[10px] font-semibold text-slate-600 uppercase mb-1">Comments</div>
-                      {sentimentPieData(profileData.commentSentimentBreakdown).length > 0 ? (
-                        <ResponsiveContainer width="100%" height={110}>
-                          <PieChart>
-                            <Pie 
-                              data={sentimentPieData(profileData.commentSentimentBreakdown)} 
-                              dataKey="value" 
-                              cx="50%" 
-                              cy="50%" 
-                              innerRadius={26} 
-                              outerRadius={45} 
-                              paddingAngle={2}
-                              onClick={(data) => {
-                                const sentiment = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
-                                setCommentSentimentFilter(prev => prev === sentiment ? null : sentiment);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              {sentimentPieData(profileData.commentSentimentBreakdown).map((d, i) => (
-                                <Cell 
-                                  key={i} 
-                                  fill={d.color} 
-                                  stroke={commentSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
-                                  strokeWidth={commentSentimentFilter === d.name.toLowerCase() ? 3 : 0}
-                                  opacity={commentSentimentFilter && commentSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
-                                />
-                              ))}
-                            </Pie>
-                            <RTooltip formatter={(v: any) => `${v}%`} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-[110px] flex items-center justify-center text-[10px] text-slate-400">No data</div>
-                      )}
-                      {commentSentimentFilter && (
-                        <div className="text-[9px] text-blue-600 font-medium mt-1">
-                          Filter: {commentSentimentFilter}
-                          <button 
-                            onClick={() => setCommentSentimentFilter(null)}
-                            className="ml-1 text-slate-400 hover:text-slate-600 underline"
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-[9px] text-slate-400 text-center mt-2">Click a color to filter each chart independently</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* === BOTTOM ANALYTICS ROW === */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {/* Top Communities */}
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-2.5 border-b border-slate-100">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Hash className="h-4 w-4 text-blue-600" /> Top Communities
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <CommunitiesTreemap data={profileData.activeSubreddits || []} />
-              </CardContent>
-            </Card>
-
-            {/* Keyword Intelligence */}
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-2.5 border-b border-slate-100">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                {(profileData.wordCloud || []).length > 0 ? (
-                  <div className="space-y-2" style={{ gap: '6px' }}>
-                    {profileData.wordCloud.slice(0, 6).map((w: any, i: number) => {
-                      const max = Math.max(...profileData.wordCloud.map((x: any) => x.frequency || 0));
-                      const pct = max > 0 ? (w.frequency / max) * 100 : 0;
-                      return (
-                        <div 
-                          key={i}
-                          className="transition-all duration-150 ease-in-out hover:bg-[#f8faff] hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
-                          style={{ 
-                            padding: '6px 10px', 
-                            borderRadius: '8px'
-                          }}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span 
-                              className="truncate"
-                              style={{ 
-                                fontWeight: '500', 
-                                fontSize: '14px', 
-                                color: '#1e293b' 
-                              }}
-                            >
-                              {w.word}
-                            </span>
-                            <span 
-                              className="font-mono"
-                              style={{ 
-                                background: '#eff6ff', 
-                                color: '#3b82f6', 
-                                borderRadius: '999px', 
-                                padding: '2px 8px',
-                                fontSize: '12px',
-                                fontWeight: '600'
-                              }}
-                            >
-                              {w.frequency}
-                            </span>
-                          </div>
-                          <div 
-                            className="overflow-hidden" 
-                            style={{ 
-                              height: '5px', 
-                              borderRadius: '999px', 
-                              background: '#e2e8f0' 
-                            }}
-                          >
-                            <div 
-                              className="h-full transition-all duration-500 ease-out" 
-                              style={{ 
-                                width: `${pct}%`,
-                                background: 'linear-gradient(to right, #6366f1, #3b82f6)',
-                                animation: 'slideIn 0.5s ease-out'
-                              }} 
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 text-center py-6">No keyword data</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Posting Activity Timeline */}
-            <Card className="border-border shadow-sm">
-              <CardHeader className="pb-2.5 border-b border-slate-100">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <TrendingUp className="h-4 w-4 text-blue-600" /> Posting Activity Timeline
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3" style={{ height: '280px' }}>
-                {(profileData.monthlyActivity || []).length > 0 ? (
-                  <>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={profileData.monthlyActivity} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
-                        <YAxis fontSize={10} stroke="#94a3b8" />
-                        <RTooltip 
-                          contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0' }}
-                          formatter={(value: any, name: string, props: any) => {
-                            const dataKey = props?.dataKey;
-                            return [value, dataKey === 'posts' ? 'Posts' : 'Comments'];
-                          }}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="posts" 
-                          name="Posts"
-                          stroke="#f97316" 
-                          strokeWidth={2} 
-                          dot={{ fill: '#f97316', r: 3 }} 
-                          activeDot={{ r: 5 }} 
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="comments" 
-                          name="Comments"
-                          stroke="#3b82f6" 
-                          strokeWidth={2} 
-                          dot={{ fill: '#3b82f6', r: 3 }} 
-                          activeDot={{ r: 5 }} 
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <div className="flex items-center justify-center gap-4 mt-2 text-[10px]">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
-                        Posts
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                        Comments
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-slate-400 text-center py-12">No timeline data</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-                  </>
-      )}
-
-      {error && !profileData && (
-        <Card className="border-red-200 bg-red-50 shadow-sm">
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-700 font-medium mb-2">Analysis Failed</p>
-            <p className="text-sm text-red-600">{error}</p>
           </CardContent>
         </Card>
-      )}
 
-      {!profileData && !isLoading && !error && (
-        <div className="space-y-6">
-          {savedProfiles.length > 0 && (
-            <>
-              <h3 className="text-sm font-medium text-slate-600">Previously Analyzed Profiles</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {savedProfiles.map((p) => (
-                  <Card
-                    key={p.id}
-                    className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1"
-                    onClick={() => loadSavedProfile(p.id)}
-                  >
-                    <div className="relative bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 px-4 pt-4 pb-10">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-white font-bold text-sm truncate">u/{p.username}</span>
-                        <span className="flex items-center gap-1 text-white/90 text-[11px] font-semibold bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm shrink-0">
-                          <Zap className="h-3 w-3" />
-                          {(p.total_karma ?? 0).toLocaleString()}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-white/80 font-medium">{p.account_age || 'Unknown age'}</span>
-                      <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
-                      <div className="absolute bottom-0 left-0 w-14 h-14 bg-white/5 rounded-full translate-y-6 -translate-x-4" />
+        {profileData && (
+          <>
+            <Button variant="ghost" size="sm" className="gap-2 text-slate-600" onClick={() => { setProfileData(null); setError(null); }}>
+              <ArrowLeft className="h-4 w-4" /> Back to Overview
+            </Button>
+
+            {/* === PREMIUM PROFILE HEADER === */}
+            <Card className="border-border shadow-sm overflow-hidden bg-card">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-6">
+                  {/* LEFT: Avatar + name */}
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 rounded-full border-2 border-blue-100 shadow-sm overflow-hidden bg-gradient-to-br from-orange-500 to-rose-600 flex items-center justify-center">
+                      {profileData.avatar ? (
+                        <img
+                          src={profileData.avatar}
+                          alt={profileData.username}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <User className="h-7 w-7 text-white" />
+                      )}
                     </div>
-                    <div className="flex justify-center -mt-8 relative z-10">
-                      <div className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-orange-500 via-red-500 to-rose-600">
-                        {p.avatar ? (
-                          <img src={p.avatar} alt={p.username} className="w-full h-full object-cover" />
+                    <div>
+                      <a
+                        href={`https://www.reddit.com/user/${profileData.username}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-lg font-bold text-foreground hover:text-blue-600 inline-flex items-center gap-1.5"
+                      >
+                        u/{profileData.username}
+                        <ExternalLink className="h-3.5 w-3.5 opacity-60" />
+                      </a>
+                    </div>
+                  </div>
+
+                  <Separator orientation="vertical" className="h-14" />
+
+                  {/* CENTER: Metrics - clean and balanced */}
+                  <div className="flex-1 flex items-center justify-around">
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
+                        <ThumbsUp className="h-3 w-3" /> Karma
+                      </div>
+                      <div className="text-lg font-bold text-foreground">{(profileData.totalKarma || 0).toLocaleString()}</div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
+                        <Calendar className="h-3 w-3" /> Account Age
+                      </div>
+                      <div className="text-sm font-bold text-foreground mt-0.5">{profileData.accountAge}</div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
+                        <MessageSquare className="h-3 w-3" /> Posts
+                      </div>
+                      <div className="text-lg font-bold text-foreground">{(profileData.postsCount || 0).toLocaleString()}</div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">
+                        <MessageCircle className="h-3 w-3" /> Comments
+                      </div>
+                      <div className="text-lg font-bold text-foreground">{(profileData.commentsCount || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* === MAIN GRID: 70/30 === */}
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-5">
+              {/* === LEFT: UNIFIED INTELLIGENCE FEED (70%) === */}
+              <div className="lg:col-span-7">
+                <Card className="border-border shadow-sm h-full">
+                  <CardHeader className="pb-3 border-b border-slate-100">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Target className="h-4 w-4 text-blue-600" />
+                        Unified Intelligence Feed
+                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Posts</span>
+                          <Select value={postsSort} onValueChange={(v) => setPostsSort(v as any)}>
+                            <SelectTrigger className="h-8 w-[110px] text-xs border-border">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="recent" className="text-xs">Recent</SelectItem>
+                              <SelectItem value="top" className="text-xs">Top</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Comments</span>
+                          <Select value={commentsSort} onValueChange={(v) => setCommentsSort(v as any)}>
+                            <SelectTrigger className="h-8 w-[110px] text-xs border-border">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="recent" className="text-xs">Recent</SelectItem>
+                              <SelectItem value="top" className="text-xs">Top</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Posts */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2.5 px-1">
+                          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            {postsSort === 'top' ? 'Top Posts' : 'Recent Posts'}
+                          </h4>
+                          <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-500 px-1.5 py-0">
+                            {sortedPosts.length}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2 max-h-[700px] overflow-y-auto pr-1">
+                          {sortedPosts.length > 0 ? (
+                            <>
+                              {sortedPosts.slice(0, visiblePosts).map((item: any, i: number) => renderSentimentRow(item, `post-${postsSort}-${i}`, true))}
+                              {sortedPosts.length > visiblePosts && (
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVisiblePosts(p => p + 10)}>
+                                  <ChevronDown className="h-3 w-3 mr-1" /> See {sortedPosts.length - visiblePosts} more
+                                </Button>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-center text-xs text-slate-400 py-8 border border-dashed border-slate-200 rounded">
+                              No posts available
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Comments */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2.5 px-1">
+                          <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                            {commentsSort === 'top' ? 'Top Comments' : 'Recent Comments'}
+                          </h4>
+                          <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-500 px-1.5 py-0">
+                            {sortedComments.length}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2 max-h-[700px] overflow-y-auto pr-1">
+                          {sortedComments.length > 0 ? (
+                            <>
+                              {sortedComments.slice(0, visibleComments).map((item: any, i: number) => renderSentimentRow(item, `comment-${commentsSort}-${i}`, false))}
+                              {sortedComments.length > visibleComments && (
+                                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setVisibleComments(p => p + 10)}>
+                                  <ChevronDown className="h-3 w-3 mr-1" /> See {sortedComments.length - visibleComments} more
+                                </Button>
+                              )}
+                            </>
+                          ) : profileData?.isPrivateProfile ? (
+                            <div className="text-center text-xs text-amber-600 py-8 border border-dashed border-amber-200 rounded bg-amber-50/50">
+                              <AlertCircle className="h-4 w-4 mx-auto mb-1 text-amber-500" />
+                              Comments not fetched due to Reddit's Security Policy
+                            </div>
+                          ) : (
+                            <div className="text-center text-xs text-slate-400 py-8 border border-dashed border-slate-200 rounded">
+                              No comments available
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* === RIGHT SIDEBAR (30%) === */}
+              <div className="lg:col-span-3 space-y-5">
+                {/* Behavioral Intelligence */}
+                <Card className="border-border shadow-sm">
+                  <CardHeader className="pb-2.5 border-b border-slate-100">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <Activity className="h-4 w-4 text-blue-600" /> Behavioral Intelligence
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-2.5 text-xs">
+                    {[
+                      { label: 'Most Active Hour', value: profileData.activityPattern.mostActiveHour, icon: Clock },
+                      { label: 'Most Active Day', value: profileData.activityPattern.mostActiveDay, icon: Calendar },
+                      { label: 'Posting Frequency', value: `${(((profileData.postsCount || 0) + (profileData.commentsCount || 0)) / Math.max(1, (profileData.monthlyActivity?.length || 1))).toFixed(1)} / month`, icon: TrendingUp },
+                      { label: 'Avg Engagement', value: `${Math.round((profileData.totalKarma || 0) / Math.max(1, (profileData.postsCount || 0) + (profileData.commentsCount || 0)))} karma/item`, icon: ThumbsUp },
+                      { label: 'Estimated Timezone', value: profileData.activityPattern.timezone, icon: Globe },
+                    ].map((row, i) => (
+                      <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b border-slate-100 last:border-0">
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <row.icon className="h-3 w-3" />
+                          <span>{row.label}</span>
+                        </div>
+                        <span className="font-semibold text-foreground text-right truncate max-w-[55%]">{row.value}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Possible Location Indicators */}
+                <Card className="border-border shadow-sm">
+                  <CardHeader className="pb-2.5 border-b border-slate-100">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-blue-600" /> Possible Location Indicators
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-slate-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs text-xs">AI-detected location signals from posts, comments, and language patterns.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 space-y-1.5">
+                    {(profileData.locationIndicators || []).slice(0, 6).map((loc: string, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-xs py-1.5 px-2 rounded bg-muted border border-border">
+                        <MapPin className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                        <span className="text-slate-700 truncate">{loc}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Dual Sentiment Charts */}
+                <Card className="border-border shadow-sm">
+                  <CardHeader className="pb-2.5 border-b border-slate-100">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      <BarChart3 className="h-4 w-4 text-blue-600" /> Sentiment Distribution
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Posts Chart */}
+                      <div className="text-center">
+                        <div className="text-[10px] font-semibold text-slate-600 uppercase mb-1">Posts</div>
+                        {sentimentPieData(profileData.postSentimentBreakdown).length > 0 ? (
+                          <ResponsiveContainer width="100%" height={110}>
+                            <PieChart>
+                              <Pie
+                                data={sentimentPieData(profileData.postSentimentBreakdown)}
+                                dataKey="value"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={26}
+                                outerRadius={45}
+                                paddingAngle={2}
+                                onClick={(data) => {
+                                  const sentiment = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                  setPostSentimentFilter(prev => prev === sentiment ? null : sentiment);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                {sentimentPieData(profileData.postSentimentBreakdown).map((d, i) => (
+                                  <Cell
+                                    key={i}
+                                    fill={d.color}
+                                    stroke={postSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
+                                    strokeWidth={postSentimentFilter === d.name.toLowerCase() ? 3 : 0}
+                                    opacity={postSentimentFilter && postSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
+                                  />
+                                ))}
+                              </Pie>
+                              <RTooltip formatter={(v: any) => `${v}%`} />
+                            </PieChart>
+                          </ResponsiveContainer>
                         ) : (
-                          <User className="h-7 w-7 text-white" />
+                          <div className="h-[110px] flex items-center justify-center text-[10px] text-slate-400">No data</div>
+                        )}
+                        {postSentimentFilter && (
+                          <div className="text-[9px] text-blue-600 font-medium mt-1">
+                            Filter: {postSentimentFilter}
+                            <button
+                              onClick={() => setPostSentimentFilter(null)}
+                              className="ml-1 text-slate-400 hover:text-slate-600 underline"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Comments Chart */}
+                      <div className="text-center">
+                        <div className="text-[10px] font-semibold text-slate-600 uppercase mb-1">Comments</div>
+                        {sentimentPieData(profileData.commentSentimentBreakdown).length > 0 ? (
+                          <ResponsiveContainer width="100%" height={110}>
+                            <PieChart>
+                              <Pie
+                                data={sentimentPieData(profileData.commentSentimentBreakdown)}
+                                dataKey="value"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={26}
+                                outerRadius={45}
+                                paddingAngle={2}
+                                onClick={(data) => {
+                                  const sentiment = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                  setCommentSentimentFilter(prev => prev === sentiment ? null : sentiment);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                {sentimentPieData(profileData.commentSentimentBreakdown).map((d, i) => (
+                                  <Cell
+                                    key={i}
+                                    fill={d.color}
+                                    stroke={commentSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
+                                    strokeWidth={commentSentimentFilter === d.name.toLowerCase() ? 3 : 0}
+                                    opacity={commentSentimentFilter && commentSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
+                                  />
+                                ))}
+                              </Pie>
+                              <RTooltip formatter={(v: any) => `${v}%`} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-[110px] flex items-center justify-center text-[10px] text-slate-400">No data</div>
+                        )}
+                        {commentSentimentFilter && (
+                          <div className="text-[9px] text-blue-600 font-medium mt-1">
+                            Filter: {commentSentimentFilter}
+                            <button
+                              onClick={() => setCommentSentimentFilter(null)}
+                              className="ml-1 text-slate-400 hover:text-slate-600 underline"
+                            >
+                              Clear
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div className="px-4 pt-2 pb-3 text-center">
-                      <a
-                        href={`https://www.reddit.com/user/${p.username}`}
-                        target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm font-bold text-foreground hover:text-primary transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        u/{p.username}
-                        <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </a>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {p.analyzed_at ? new Date(p.analyzed_at).toLocaleString() : 'Unknown date'}
-                      </p>
-                    </div>
-                    <div className="flex border-t border-border/50">
-                      <Button variant="ghost" size="sm" className="flex-1 rounded-none text-xs h-9 hover:bg-muted/80"
-                        onClick={(e) => { e.stopPropagation(); loadSavedProfile(p.id); }}>
-                        <Search className="h-3.5 w-3.5 mr-1" /> View
-                      </Button>
-                      <div className="w-px bg-border/50" />
-                      <Button variant="ghost" size="sm" className="rounded-none text-xs h-9 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => { e.stopPropagation(); deleteSavedProfile(p.id); }}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+                    <p className="text-[9px] text-slate-400 text-center mt-2">Click a color to filter each chart independently</p>
+                  </CardContent>
+                </Card>
               </div>
-            </>
-          )}
-          <Card className="border-dashed border-border bg-card">
+            </div>
+
+            {/* === BOTTOM ANALYTICS ROW === */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Top Communities */}
+              <Card className="border-border shadow-sm">
+                <CardHeader className="pb-2.5 border-b border-slate-100">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Hash className="h-4 w-4 text-blue-600" /> Top Communities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <CommunitiesTreemap data={profileData.activeSubreddits || []} />
+                </CardContent>
+              </Card>
+
+              {/* Keyword Intelligence */}
+              <Card className="border-border shadow-sm">
+                <CardHeader className="pb-2.5 border-b border-slate-100">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {(profileData.wordCloud || []).length > 0 ? (
+                    <div className="space-y-2" style={{ gap: '6px' }}>
+                      {profileData.wordCloud.slice(0, 6).map((w: any, i: number) => {
+                        const max = Math.max(...profileData.wordCloud.map((x: any) => x.frequency || 0));
+                        const pct = max > 0 ? (w.frequency / max) * 100 : 0;
+                        return (
+                          <div
+                            key={i}
+                            className="transition-all duration-150 ease-in-out hover:bg-[#f8faff] hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: '8px'
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span
+                                className="truncate"
+                                style={{
+                                  fontWeight: '500',
+                                  fontSize: '14px',
+                                  color: '#1e293b'
+                                }}
+                              >
+                                {w.word}
+                              </span>
+                              <span
+                                className="font-mono"
+                                style={{
+                                  background: '#eff6ff',
+                                  color: '#3b82f6',
+                                  borderRadius: '999px',
+                                  padding: '2px 8px',
+                                  fontSize: '12px',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                {w.frequency}
+                              </span>
+                            </div>
+                            <div
+                              className="overflow-hidden"
+                              style={{
+                                height: '5px',
+                                borderRadius: '999px',
+                                background: '#e2e8f0'
+                              }}
+                            >
+                              <div
+                                className="h-full transition-all duration-500 ease-out"
+                                style={{
+                                  width: `${pct}%`,
+                                  background: 'linear-gradient(to right, #6366f1, #3b82f6)',
+                                  animation: 'slideIn 0.5s ease-out'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-6">No keyword data</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Posting Activity Timeline */}
+              <Card className="border-border shadow-sm">
+                <CardHeader className="pb-2.5 border-b border-slate-100">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <TrendingUp className="h-4 w-4 text-blue-600" /> Posting Activity Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3" style={{ height: '280px' }}>
+                  {(profileData.monthlyActivity || []).length > 0 ? (
+                    <>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={profileData.monthlyActivity} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+                          <YAxis fontSize={10} stroke="#94a3b8" />
+                          <RTooltip
+                            contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0' }}
+                            formatter={(value: any, name: string, props: any) => {
+                              const dataKey = props?.dataKey;
+                              return [value, dataKey === 'posts' ? 'Posts' : 'Comments'];
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="posts"
+                            name="Posts"
+                            stroke="#f97316"
+                            strokeWidth={2}
+                            dot={{ fill: '#f97316', r: 3 }}
+                            activeDot={{ r: 5 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="comments"
+                            name="Comments"
+                            stroke="#3b82f6"
+                            strokeWidth={2}
+                            dot={{ fill: '#3b82f6', r: 3 }}
+                            activeDot={{ r: 5 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                      <div className="flex items-center justify-center gap-4 mt-2 text-[10px]">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+                          Posts
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                          Comments
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-12">No timeline data</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+          </>
+        )}
+
+        {error && !profileData && (
+          <Card className="border-red-200 bg-red-50 shadow-sm">
             <CardContent className="py-12 text-center">
-              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-foreground">Enter a username to perform detailed profile analysis</p>
-              <p className="text-xs text-muted-foreground mt-2">Real-time data fetched from Reddit API</p>
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <p className="text-red-700 font-medium mb-2">Analysis Failed</p>
+              <p className="text-sm text-red-600">{error}</p>
             </CardContent>
           </Card>
-        </div>
-      )}
-    </div>
+        )}
+
+        {!profileData && !isLoading && !error && (
+          <div className="space-y-6">
+            {savedProfiles.length > 0 && (
+              <>
+                <h3 className="text-sm font-medium text-slate-600">Previously Analyzed Profiles</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {savedProfiles.map((p) => (
+                    <Card
+                      key={p.id}
+                      className="group relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1"
+                      onClick={() => loadSavedProfile(p.id)}
+                    >
+                      <div className="relative bg-gradient-to-br from-orange-500 via-red-500 to-rose-600 px-4 pt-4 pb-10">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-white font-bold text-sm truncate">u/{p.username}</span>
+                          <span className="flex items-center gap-1 text-white/90 text-[11px] font-semibold bg-white/20 rounded-full px-2 py-0.5 backdrop-blur-sm shrink-0">
+                            <Zap className="h-3 w-3" />
+                            {(p.total_karma ?? 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-white/80 font-medium">{p.account_age || 'Unknown age'}</span>
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
+                        <div className="absolute bottom-0 left-0 w-14 h-14 bg-white/5 rounded-full translate-y-6 -translate-x-4" />
+                      </div>
+                      <div className="flex justify-center -mt-8 relative z-10">
+                        <div className="w-16 h-16 rounded-full border-4 border-white bg-white shadow-lg overflow-hidden flex items-center justify-center bg-gradient-to-br from-orange-500 via-red-500 to-rose-600">
+                          {p.avatar ? (
+                            <img src={p.avatar} alt={p.username} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="h-7 w-7 text-white" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="px-4 pt-2 pb-3 text-center">
+                        <a
+                          href={`https://www.reddit.com/user/${p.username}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-bold text-foreground hover:text-primary transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          u/{p.username}
+                          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </a>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {p.analyzed_at ? new Date(p.analyzed_at).toLocaleString() : 'Unknown date'}
+                        </p>
+                      </div>
+                      <div className="flex border-t border-border/50">
+                        <Button variant="ghost" size="sm" className="flex-1 rounded-none text-xs h-9 hover:bg-muted/80"
+                          onClick={(e) => { e.stopPropagation(); loadSavedProfile(p.id); }}>
+                          <Search className="h-3.5 w-3.5 mr-1" /> View
+                        </Button>
+                        <div className="w-px bg-border/50" />
+                        <Button variant="ghost" size="sm" className="rounded-none text-xs h-9 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => { e.stopPropagation(); deleteSavedProfile(p.id); }}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
+            <Card className="border-dashed border-border bg-card">
+              <CardContent className="py-12 text-center">
+                <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-foreground">Enter a username to perform detailed profile analysis</p>
+                <p className="text-xs text-muted-foreground mt-2">Real-time data fetched from Reddit API</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
     </TooltipProvider>
   );
 };

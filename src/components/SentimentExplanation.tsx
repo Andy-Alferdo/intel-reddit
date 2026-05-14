@@ -94,7 +94,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
       case 'negative':
         return 'bg-red-100 text-red-700 border-red-300';
       default:
-        return 'bg-gray-100 text-gray-700 border-gray-300';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -105,7 +105,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
       case 'negative':
         return 'bg-red-500';
       default:
-        return 'bg-gray-400';
+        return 'bg-muted-foreground';
     }
   };
 
@@ -118,7 +118,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
   const getPullColor = (contribution: number) => {
     if (contribution > 0) return 'text-green-600';
     if (contribution < 0) return 'text-red-600';
-    return 'text-gray-500';
+    return 'text-muted-foreground';
   };
 
   const explanationObj = typeof explanation === 'string' ? null : explanation;
@@ -149,7 +149,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
     : 1;
 
   return (
-    <Card className="mt-4 shadow-sm">
+    <Card className="mt-4 shadow-sm border-border">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold">Sentiment analysis</CardTitle>
       </CardHeader>
@@ -162,7 +162,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
           >
             {sentiment?.charAt(0).toUpperCase() + sentiment?.slice(1)}
           </Badge>
-          <span className="text-2xl font-bold text-gray-900">
+          <span className="text-2xl font-bold text-foreground">
             {Math.round(confidence * 100)}%
           </span>
         </div>
@@ -170,12 +170,12 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
         {/* WORD SIGNALS Section */}
         {sortedWordSignals.length > 0 && (
           <div>
-            <h4 className="text-xs font-semibold text-gray-600 mb-3 uppercase tracking-wide">WORD SIGNALS</h4>
+            <h4 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wide">WORD SIGNALS</h4>
             <div className="space-y-3">
               {sortedWordSignals.map((signal, index) => (
                 <div key={index} className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-gray-700 w-20">{signal.word}</span>
-                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <span className="text-sm font-medium text-foreground w-20">{signal.word}</span>
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full ${getBarColor(signal.sentiment)}`}
                       style={{ width: `${(Math.abs(signal.contribution) / maxContribution) * 100}%` }}
@@ -191,7 +191,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
         )}
 
         {/* Informational Note */}
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <p className="text-xs text-muted-foreground leading-relaxed">
           This analysis identifies key words that influence the sentiment prediction. Words with higher bars have stronger impact on the classification.
         </p>
 
@@ -211,7 +211,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
 
         {/* Deep Analysis Results */}
         {showDeepAnalysis && deepAnalysis && (
-          <Card className="mt-4 border-l-4 border-l-purple-500 shadow-sm">
+          <Card className="mt-4 border-l-4 border-l-purple-500 shadow-sm bg-card">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Zap className="h-5 w-5 text-purple-600" />
@@ -222,10 +222,10 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
               {/* Deep Analysis Method */}
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">Deep Method:</span>
-                <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200">
+                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30 text-purple-400">
                   {deepAnalysis.deep_explanation.explanation_method === 'LIME' ? '🍋 LIME' : '📝 Enhanced Rule-based'}
                 </Badge>
-                <Badge variant="outline" className="text-xs bg-purple-50 border-purple-200">
+                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30 text-purple-400">
                   {deepAnalysis.deep_explanation.analysis_depth}
                 </Badge>
               </div>
@@ -236,7 +236,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
                   <Brain className="h-4 w-4 text-purple-600" />
                   Deep AI Reasoning
                 </h4>
-                <p className="text-sm text-muted-foreground leading-relaxed bg-purple-50 p-3 rounded-lg border border-purple-200">
+                <p className="text-sm text-muted-foreground leading-relaxed bg-purple-500/10 p-3 rounded-lg border border-purple-500/20">
                   {deepAnalysis.deep_explanation.reasoning}
                 </p>
               </div>
@@ -250,7 +250,7 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
                   </h4>
                   <div className="space-y-2">
                     {deepAnalysis.deep_explanation.word_contributions.slice(0, 10).map((contrib, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-purple-50 rounded border border-purple-200">
+                      <div key={index} className="flex items-center justify-between p-2 bg-purple-500/10 rounded border border-purple-500/20">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">{contrib.word}</span>
                           <Badge 

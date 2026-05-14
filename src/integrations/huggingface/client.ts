@@ -139,7 +139,9 @@ export async function analyzeDeep(text: string): Promise<DeepAnalysisResult> {
   const result = await client.predict("/deep_analyze", {
     text: text
   });
-  return result.data;
+  // Gradio returns result.data as an array; unwrap the first element
+  const hfResult = Array.isArray(result.data) ? result.data[0] : result.data;
+  return hfResult;
 }
 
 /**

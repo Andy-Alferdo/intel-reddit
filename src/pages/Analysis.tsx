@@ -1311,7 +1311,7 @@ const Analysis = () => {
                           <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                             {communityPostsFilter === 'recent20' ? 'RECENT POSTS' : 'TOP POSTS'}
                           </span>
-                          <span className="text-xs text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
                             {(() => {
                               const currentPosts = communityPostsFilter === 'recent20'
                                 ? communityData.recent20Posts || []
@@ -1351,7 +1351,7 @@ const Analysis = () => {
                                     : []);
                                 
                                 return (
-                                  <div key={index} className="p-4 border-b border-gray-100 last:border-b-0">
+                                  <div key={index} className="p-4 border-b border-border last:border-b-0">
                                     {/* Post Header - Avatar, Username, Subreddit, Badge */}
                                     <div className="flex items-start gap-3">
                                       {/* Avatar */}
@@ -1395,7 +1395,7 @@ const Analysis = () => {
                                         </div>
                                         
                                         {/* Post Title - Blue link style */}
-                                        <h3 className="text-blue-600 hover:text-blue-800 cursor-pointer mt-2 text-sm font-medium">
+                                        <h3 className="text-blue-400 hover:text-blue-300 cursor-pointer mt-2 text-sm font-medium">
                                           {post.title}
                                         </h3>
                                         
@@ -1405,7 +1405,7 @@ const Analysis = () => {
                                             {keyWords.slice(0, 6).map((word: string, i: number) => (
                                               <span 
                                                 key={i} 
-                                                className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded border border-gray-200"
+                                                className="text-xs px-2 py-0.5 bg-muted text-muted-foreground rounded border border-border"
                                               >
                                                 {word}
                                               </span>
@@ -1415,10 +1415,10 @@ const Analysis = () => {
                                         
                                         {/* xAI Deep Analysis Section */}
                                           <div className="mt-3">
-                                            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                                            <div className="border border-border rounded-lg overflow-hidden bg-card shadow-sm">
                                               {/* Header */}
-                                              <div className="px-3 py-2 border-b border-gray-100">
-                                                <div className="text-xs font-semibold text-gray-900">Sentiment analysis</div>
+                                              <div className="px-3 py-2 border-b border-border">
+                                                <div className="text-xs font-semibold text-foreground">Sentiment analysis</div>
                                               </div>
                                               
                                               {/* Analysis Content */}
@@ -1453,7 +1453,7 @@ const Analysis = () => {
                                                   const getBarColor = (contribution: number) => {
                                                     if (contribution > 0) return 'bg-green-500';
                                                     if (contribution < 0) return 'bg-red-500';
-                                                    return 'bg-gray-400';
+                                                    return 'bg-muted-foreground';
                                                   };
 
                                                   const getPullDirection = (contribution: number) => {
@@ -1465,14 +1465,14 @@ const Analysis = () => {
                                                   const getPullColor = (contribution: number) => {
                                                     if (contribution > 0) return 'text-green-600';
                                                     if (contribution < 0) return 'text-red-600';
-                                                    return 'text-gray-500';
+                                                    return 'text-muted-foreground';
                                                   };
 
                                                   return (
                                                     <>
                                                       {topTokens.length > 0 && (
                                                         <div>
-                                                          <div className="text-[10px] font-semibold text-gray-600 mb-2 uppercase tracking-wide">WORD SIGNALS</div>
+                                                          <div className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wide">WORD SIGNALS</div>
                                                           <div className="space-y-2">
                                                             {topTokens.map((token, i) => {
                                                               const score = token.contribution;
@@ -1480,8 +1480,8 @@ const Analysis = () => {
                                                               
                                                               return (
                                                                 <div key={i} className="flex items-center gap-2">
-                                                                  <span className="text-xs font-medium text-gray-700 w-16 truncate">{token.word}</span>
-                                                                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                                  <span className="text-xs font-medium text-foreground w-16 truncate">{token.word}</span>
+                                                                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                                                     <div
                                                                       className={`h-full ${getBarColor(score)}`}
                                                                       style={{ width: `${Math.min(100, barWidth)}%` }}
@@ -1498,7 +1498,7 @@ const Analysis = () => {
                                                       )}
 
                                                       {/* Informational Note */}
-                                                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                                                      <p className="text-[10px] text-muted-foreground leading-relaxed">
                                                         This analysis identifies key words that influence the sentiment prediction.
                                                       </p>
                                                     </>
@@ -1506,11 +1506,11 @@ const Analysis = () => {
                                                 })()}
                                                 
                                                 {/* Action Buttons */}
-                                                <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                                                <div className="flex items-center gap-2 pt-2 border-t border-border">
                                                   <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
+                                                    className="h-5 px-2 text-[10px] border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                                                     disabled={loadingDeepAnalysis[index]}
                                                     onClick={() => {
                                                       const newExpanded = new Set(expandedEvidence);
@@ -1550,7 +1550,7 @@ const Analysis = () => {
                                                   <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-5 px-2 text-[10px] text-gray-600 hover:bg-gray-50"
+                                                    className="h-5 px-2 text-[10px] text-muted-foreground hover:bg-muted"
                                                     onClick={() => setPreviewPost(post)}
                                                   >
                                                     Show Original
@@ -1561,22 +1561,22 @@ const Analysis = () => {
                                           </div>
                                         
                                         {/* Post Footer with Reddit-style Voting */}
-                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                                           {/* Reddit-style Voting Bar */}
-                                          <div className="flex items-center gap-1 bg-slate-100 rounded-full px-2 py-1">
+                                          <div className="flex items-center gap-1 bg-muted rounded-full px-2 py-1">
                                             <button 
-                                              className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-orange-500 transition-colors"
+                                              className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-orange-500 transition-colors"
                                               onClick={(e) => e.stopPropagation()}
                                             >
                                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M12 4l-8 8h16l-8-8z"/>
                                               </svg>
                                             </button>
-                                            <span className="text-[11px] font-semibold text-slate-700 min-w-[1.5rem] text-center">
+                                            <span className="text-[11px] font-semibold text-foreground min-w-[1.5rem] text-center">
                                               {post.score >= 1000 ? (post.score / 1000).toFixed(1) + 'K' : post.score || 0}
                                             </span>
                                             <button 
-                                              className="p-0.5 rounded hover:bg-white text-slate-400 hover:text-blue-500 transition-colors"
+                                              className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-blue-400 transition-colors"
                                               onClick={(e) => e.stopPropagation()}
                                             >
                                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -1588,7 +1588,7 @@ const Analysis = () => {
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-7 px-2 text-xs text-blue-600 hover:text-blue-800 gap-1.5"
+                                            className="h-7 px-2 text-xs text-blue-400 hover:text-blue-300 gap-1.5"
                                             asChild
                                           >
                                             <a href={`https://www.reddit.com${post.permalink}`} target="_blank" rel="noopener noreferrer">
