@@ -859,11 +859,13 @@ const UserProfiling = () => {
       // When HF finishes, sentiments get merged into profileData.
       let analysisData: any = null;
       try {
+        const postsToAnalyze = (redditData.posts || []).slice(0, 15);
+        const commentsToAnalyze = (redditData.comments || []).slice(0, 30);
         analysisData = await analyzeWithHuggingFace(
-          redditData.posts || [],
-          redditData.comments || []
+          postsToAnalyze,
+          commentsToAnalyze
         );
-        console.log('HF sentiment analysis completed');
+        console.log(`HF sentiment analysis completed for ${postsToAnalyze.length} posts and ${commentsToAnalyze.length} comments`);
       } catch (analysisError) {
         console.error('HF analysis error (continuing without sentiment):', analysisError);
         // Continue with null analysisData — profile still renders with Reddit data
@@ -996,25 +998,32 @@ const UserProfiling = () => {
           }
           return { positive: 33, neutral: 34, negative: 33 };
         })(),
-        postSentiments: (analysisData?.postSentiments || []).map((s: any, i: number) => ({
-          ...s,
-          body: s.body || redditData.posts?.[i]?.selftext || '',
-          permalink: redditData.posts?.[i]?.permalink || null,
-          score: redditData.posts?.[i]?.score || 0,
-          created_utc: redditData.posts?.[i]?.created_utc || 0,
-          num_comments: redditData.posts?.[i]?.num_comments || 0,
-          subreddit: redditData.posts?.[i]?.subreddit || '',
-        })),
-        commentSentiments: (analysisData?.commentSentiments || []).map((s: any, i: number) => ({
-          ...s,
-          body: redditData.comments?.[i]?.body || s.body || s.text || '',
-          text: redditData.comments?.[i]?.body || s.text || '',
-          permalink: redditData.comments?.[i]?.permalink || redditData.comments?.[i]?.context || redditData.comments?.[i]?.link_permalink || null,
-          link_title: redditData.comments?.[i]?.link_title || null,
-          created_utc: redditData.comments?.[i]?.created_utc,
-          subreddit: redditData.comments?.[i]?.subreddit,
-          score: redditData.comments?.[i]?.score ?? s.score ?? 0,
-        })),
+        postSentiments: (redditData.posts || []).map((p: any, i: number) => {
+          const s = analysisData?.postSentiments?.[i] || { sentiment: 'neutral' };
+          return {
+            ...s,
+            body: p.selftext || '',
+            permalink: p.permalink || null,
+            score: p.score || 0,
+            created_utc: p.created_utc || 0,
+            num_comments: p.num_comments || 0,
+            subreddit: p.subreddit || '',
+            title: p.title || '',
+          };
+        }),
+        commentSentiments: (redditData.comments || []).map((c: any, i: number) => {
+          const s = analysisData?.commentSentiments?.[i] || { sentiment: 'neutral' };
+          return {
+            ...s,
+            body: c.body || '',
+            text: c.body || '',
+            permalink: c.permalink || c.context || c.link_permalink || null,
+            link_title: c.link_title || null,
+            created_utc: c.created_utc,
+            subreddit: c.subreddit,
+            score: c.score ?? s.score ?? 0,
+          };
+        }),
         postSentimentBreakdown: (() => {
           const posts = analysisData?.postSentiments || [];
           if (posts.length === 0) return null;
