@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getModelServerUrl } from '../config/api';
+import { analyzeDeep } from '@/integrations/huggingface/client';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -413,18 +413,19 @@ const UserProfiling = () => {
     })));
 
     try {
-      const response = await fetch(getModelServerUrl('/deep-analysis'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+      const hfResult = await analyzeDeep(text);
 
-      if (!response.ok) {
-        throw new Error(`Deep analysis failed: ${response.statusText}`);
-      }
+      // Map hfResult to the expected format
+      const result = {
+        deep_explanation: {
+          word_contributions: hfResult.word_importance.map((w: any) => ({
+            word: w.word,
+            contribution: w.importance
+          }))
+        },
+        confidence: hfResult.confidence
+      };
 
-      const result = await response.json();
-      
       // Update state with result
       setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
         isAnalyzing: false, 

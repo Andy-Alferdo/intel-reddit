@@ -23,7 +23,7 @@ import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
 import { useMonitoring } from '@/contexts/MonitoringContext';
 import { useNavigate } from 'react-router-dom';
-import { getModelServerUrl } from '../../config/api';
+import { analyzeDeep } from '@/integrations/huggingface/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface SentimentItem {
@@ -462,17 +462,17 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
     })));
 
     try {
-      const response = await fetch(getModelServerUrl('/deep-analysis'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+      const hfResult = await analyzeDeep(text);
 
-      if (!response.ok) {
-        throw new Error(`Deep analysis failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const result = {
+        deep_explanation: {
+          word_contributions: hfResult.word_importance.map((w: any) => ({
+            word: w.word,
+            contribution: w.importance
+          }))
+        },
+        confidence: hfResult.confidence
+      };
       
       // Update state with result
       setDeepAnalysisStates(prev => new Map(prev.set(postId, { 

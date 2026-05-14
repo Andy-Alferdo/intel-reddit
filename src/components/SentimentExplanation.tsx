@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Brain, TrendingUp, AlertTriangle, MessageSquare, Zap } from 'lucide-react';
-import { getModelServerUrl } from '../config/api';
+import { analyzeDeep } from '@/integrations/huggingface/client';
 import { useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -50,17 +50,25 @@ export const SentimentExplanation = ({ sentiment, explanation, text }: Sentiment
   const handleDeepAnalysis = async () => {
     setIsDeepAnalyzing(true);
     try {
-      const response = await fetch(getModelServerUrl('/deep-analysis'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+      const hfResult = await analyzeDeep(text);
 
-      if (!response.ok) {
-        throw new Error(`Deep analysis failed: ${response.statusText}`);
-      }
-
-      const result: DeepAnalysisResponse = await response.json();
+      const result: DeepAnalysisResponse = {
+        text: hfResult.text,
+        sentiment: hfResult.overall_sentiment,
+        basic_explanation: {} as any, // Mock basic if needed
+        deep_explanation: {
+          reasoning: hfResult.explanation,
+          word_contributions: hfResult.word_importance.map((w: any) => ({
+            word: w.word,
+            sentiment: w.sentiment_contribution,
+            contribution: w.importance
+          })),
+          importance_scores: [],
+          explanation_method: 'Saliency',
+          analysis_depth: 'Gradient-based'
+        }
+      };
+      
       setDeepAnalysis(result);
       setShowDeepAnalysis(true);
       toast({

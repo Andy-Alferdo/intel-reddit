@@ -19,8 +19,7 @@ const getApiUrl = () => {
   }
   
   // For production, you should set VITE_MODEL_SERVER_URL in your environment
-  // This is a fallback - replace with your actual Colab ngrok URL
-  return 'https://your-ngrok-url.ngrok-free.app';
+  return '';
 };
 
 export const API_BASE_URL = getApiUrl();

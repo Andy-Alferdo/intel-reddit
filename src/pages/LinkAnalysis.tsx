@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { getModelServerUrl } from '../config/api';
+import { analyzeDeep } from '@/integrations/huggingface/client';
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvestigation } from "@/contexts/InvestigationContext";
@@ -335,15 +335,17 @@ const LinkAnalysis = () => {
     setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { isAnalyzing: true, result: null, showDeep: false })));
 
     try {
-      const response = await fetch(getModelServerUrl('/deep-analysis'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+      const hfResult = await analyzeDeep(text);
 
-      if (!response.ok) throw new Error(`Deep analysis failed: ${response.statusText}`);
-
-      const result = await response.json();
+      const result = {
+        deep_explanation: {
+          word_contributions: hfResult.word_importance.map((w: any) => ({
+            word: w.word,
+            contribution: w.importance
+          }))
+        },
+        confidence: hfResult.confidence
+      };
       
       setDeepAnalysisStates(prev => new Map(prev.set(itemKey, { 
         isAnalyzing: false, 
