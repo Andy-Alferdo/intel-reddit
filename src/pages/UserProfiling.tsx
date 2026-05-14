@@ -337,6 +337,55 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   );
 };
 
+const analyzeWithTimeout = async (
+  posts: any[], 
+  comments: any[], 
+  maxTimeMs: number
+) => {
+  const result = {
+    postSentiments: [] as any[],
+    commentSentiments: [] as any[],
+  };
+  
+  const startTime = performance.now();
+  let pIdx = 0;
+  let cIdx = 0;
+  
+  // We process in very small chunks to check time frequently
+  const POST_CHUNK = 2;
+  const COMMENT_CHUNK = 4;
+  
+  while (performance.now() - startTime < maxTimeMs && (pIdx < posts.length || cIdx < comments.length)) {
+    const pChunk = posts.slice(pIdx, pIdx + POST_CHUNK);
+    const cChunk = comments.slice(cIdx, cIdx + COMMENT_CHUNK);
+    
+    if (pChunk.length === 0 && cChunk.length === 0) break;
+    
+    try {
+      const chunkResult = await analyzeWithHuggingFace(
+        pChunk.map(p => ({ title: p.title || '', selftext: p.selftext || p.body || '', subreddit: p.subreddit || '' })),
+        cChunk.map(c => ({ body: c.body || c.text || '', subreddit: c.subreddit || '' }))
+      );
+      
+      result.postSentiments.push(...(chunkResult.postSentiments || []));
+      result.commentSentiments.push(...(chunkResult.commentSentiments || []));
+      
+      pIdx += pChunk.length;
+      cIdx += cChunk.length;
+    } catch (e) {
+      console.error("Chunk analysis failed", e);
+      break; 
+    }
+  }
+  
+  return {
+    postSentiments: result.postSentiments,
+    commentSentiments: result.commentSentiments,
+    lastPostIdx: pIdx,
+    lastCommentIdx: cIdx
+  };
+};
+
 const UserProfiling = () => {
   const location = useLocation();
   const [username, setUsername] = useState('');
@@ -861,24 +910,33 @@ const UserProfiling = () => {
       console.log(`[Perf] Reddit data fetched successfully in ${(perfReddit - perfStart).toFixed(2)}ms`);
       setTargetProgress(60);
 
-      // ── HF Sentiment Analysis (runs in background) ──────────────
-      // Start the HF call but DON'T await it — render profile immediately.
-      // When HF finishes, sentiments get merged into profileData.
+      // ── HF Sentiment Analysis (30-second timer batching) ──────────────
       let analysisData: any = null;
+      let initialVisiblePosts = INITIAL_VISIBLE;
+      let initialVisibleComments = INITIAL_VISIBLE;
+      
       try {
-        const postsToAnalyze = (redditData.posts || []).slice(0, 15);
-        const commentsToAnalyze = (redditData.comments || []).slice(0, 30);
-        console.log(`[Perf] Starting HF sentiment analysis for ${postsToAnalyze.length} posts and ${commentsToAnalyze.length} comments...`);
+        console.log(`[Perf] Starting HF sentiment analysis with 30s timer limit...`);
         const hfStart = performance.now();
-        analysisData = await analyzeWithHuggingFace(
-          postsToAnalyze,
-          commentsToAnalyze
+        
+        const timedResult = await analyzeWithTimeout(
+          redditData.posts || [],
+          redditData.comments || [],
+          30000 // 30 seconds max
         );
+        
+        analysisData = {
+          postSentiments: timedResult.postSentiments,
+          commentSentiments: timedResult.commentSentiments
+        };
+        
+        initialVisiblePosts = Math.max(INITIAL_VISIBLE, timedResult.lastPostIdx);
+        initialVisibleComments = Math.max(INITIAL_VISIBLE, timedResult.lastCommentIdx);
+        
         const hfEnd = performance.now();
-        console.log(`[Perf] HF sentiment analysis completed in ${(hfEnd - hfStart).toFixed(2)}ms`);
+        console.log(`[Perf] HF sentiment analysis completed in ${(hfEnd - hfStart).toFixed(2)}ms. Analyzed ${timedResult.lastPostIdx} posts and ${timedResult.lastCommentIdx} comments.`);
       } catch (analysisError) {
         console.error('[Perf] HF analysis error (continuing without sentiment):', analysisError);
-        // Continue with null analysisData — profile still renders with Reddit data
       }
 
       setTargetProgress(90);
@@ -1076,6 +1134,8 @@ const UserProfiling = () => {
       console.log(`[Perf] Data mapping & local heuristics completed in ${(perfMapping - (perfReddit ?? performance.now())).toFixed(2)}ms`);
 
       setProfileData(profileResult);
+      setVisiblePosts(initialVisiblePosts);
+      setVisibleComments(initialVisibleComments);
       setTargetProgress(100);
 
       // Save to investigation context for report generation
@@ -1535,110 +1595,122 @@ const UserProfiling = () => {
   };
 
   const handleLoadMorePosts = async () => {
-    const nextLimit = visiblePosts + 10;
-    const upcomingPosts = sortedPosts.slice(visiblePosts, nextLimit);
-    const unanalyzedPosts = upcomingPosts.filter((p: any) => !p._isAnalyzed);
+    const unanalyzedPosts = sortedPosts.filter((p: any) => !p._isAnalyzed);
     
     if (unanalyzedPosts.length > 0) {
       setIsAnalyzingMorePosts(true);
       try {
-        const postsToAnalyze = unanalyzedPosts.map((p: any) => ({
-          title: p.title || '',
-          selftext: p.body || '',
-          subreddit: p.subreddit || ''
-        }));
+        const timedResult = await analyzeWithTimeout(
+          unanalyzedPosts,
+          [],
+          30000 // 30 seconds timer
+        );
         
-        const result = await analyzeWithHuggingFace(postsToAnalyze, []);
-        
-        setProfileData((prev: any) => {
-          if (!prev) return prev;
-          const newPostSentiments = [...prev.postSentiments];
-          
-          unanalyzedPosts.forEach((up: any, index: number) => {
-            const hfResult = result.postSentiments?.[index];
-            if (hfResult) {
-              const origIndex = newPostSentiments.findIndex(p => p.permalink === up.permalink && p.created_utc === up.created_utc);
-              if (origIndex !== -1) {
-                newPostSentiments[origIndex] = { ...newPostSentiments[origIndex], ...hfResult, _isAnalyzed: true };
+        if (timedResult.lastPostIdx > 0) {
+          setProfileData((prev: any) => {
+            if (!prev) return prev;
+            const newPostSentiments = [...prev.postSentiments];
+            
+            for (let i = 0; i < timedResult.lastPostIdx; i++) {
+              const up = unanalyzedPosts[i];
+              const hfResult = timedResult.postSentiments[i];
+              if (hfResult) {
+                const origIndex = newPostSentiments.findIndex(p => p.permalink === up.permalink && p.created_utc === up.created_utc);
+                if (origIndex !== -1) {
+                  newPostSentiments[origIndex] = { ...newPostSentiments[origIndex], ...hfResult, _isAnalyzed: true };
+                }
               }
             }
+            
+            const pos = newPostSentiments.filter(s => s.sentiment === 'positive').length;
+            const neg = newPostSentiments.filter(s => s.sentiment === 'negative').length;
+            const neu = newPostSentiments.filter(s => s.sentiment === 'neutral').length;
+            const total = newPostSentiments.length || 1;
+            
+            return {
+              ...prev,
+              postSentiments: newPostSentiments,
+              postSentimentBreakdown: { 
+                positive: Math.round((pos/total)*100), 
+                neutral: Math.round((neu/total)*100), 
+                negative: Math.round((neg/total)*100) 
+              },
+            };
           });
           
-          const pos = newPostSentiments.filter(s => s.sentiment === 'positive').length;
-          const neg = newPostSentiments.filter(s => s.sentiment === 'negative').length;
-          const neu = newPostSentiments.filter(s => s.sentiment === 'neutral').length;
-          const total = newPostSentiments.length || 1;
-          
-          return {
-            ...prev,
-            postSentiments: newPostSentiments,
-            postSentimentBreakdown: { 
-              positive: Math.round((pos/total)*100), 
-              neutral: Math.round((neu/total)*100), 
-              negative: Math.round((neg/total)*100) 
-            },
-          };
-        });
+          setVisiblePosts(prev => prev + timedResult.lastPostIdx);
+        } else {
+          // If couldn't analyze any, just show 10 neutral ones
+          setVisiblePosts(prev => prev + 10);
+        }
       } catch (e) {
         console.error("Failed to analyze more posts:", e);
+        setVisiblePosts(prev => prev + 10);
       } finally {
         setIsAnalyzingMorePosts(false);
       }
+    } else {
+      setVisiblePosts(prev => prev + 10);
     }
-    setVisiblePosts(nextLimit);
   };
 
   const handleLoadMoreComments = async () => {
-    const nextLimit = visibleComments + 10;
-    const upcomingComments = sortedComments.slice(visibleComments, nextLimit);
-    const unanalyzedComments = upcomingComments.filter((c: any) => !c._isAnalyzed);
+    const unanalyzedComments = sortedComments.filter((c: any) => !c._isAnalyzed);
     
     if (unanalyzedComments.length > 0) {
       setIsAnalyzingMoreComments(true);
       try {
-        const commentsToAnalyze = unanalyzedComments.map((c: any) => ({
-          body: c.body || c.text || '',
-          subreddit: c.subreddit || ''
-        }));
+        const timedResult = await analyzeWithTimeout(
+          [],
+          unanalyzedComments,
+          30000 // 30 seconds timer
+        );
         
-        const result = await analyzeWithHuggingFace([], commentsToAnalyze);
-        
-        setProfileData((prev: any) => {
-          if (!prev) return prev;
-          const newCommentSentiments = [...prev.commentSentiments];
-          
-          unanalyzedComments.forEach((uc: any, index: number) => {
-            const hfResult = result.commentSentiments?.[index];
-            if (hfResult) {
-              const origIndex = newCommentSentiments.findIndex(c => c.permalink === uc.permalink && c.created_utc === uc.created_utc);
-              if (origIndex !== -1) {
-                newCommentSentiments[origIndex] = { ...newCommentSentiments[origIndex], ...hfResult, _isAnalyzed: true };
+        if (timedResult.lastCommentIdx > 0) {
+          setProfileData((prev: any) => {
+            if (!prev) return prev;
+            const newCommentSentiments = [...prev.commentSentiments];
+            
+            for (let i = 0; i < timedResult.lastCommentIdx; i++) {
+              const uc = unanalyzedComments[i];
+              const hfResult = timedResult.commentSentiments[i];
+              if (hfResult) {
+                const origIndex = newCommentSentiments.findIndex(c => c.permalink === uc.permalink && c.created_utc === uc.created_utc);
+                if (origIndex !== -1) {
+                  newCommentSentiments[origIndex] = { ...newCommentSentiments[origIndex], ...hfResult, _isAnalyzed: true };
+                }
               }
             }
+            
+            const pos = newCommentSentiments.filter(s => s.sentiment === 'positive').length;
+            const neg = newCommentSentiments.filter(s => s.sentiment === 'negative').length;
+            const neu = newCommentSentiments.filter(s => s.sentiment === 'neutral').length;
+            const total = newCommentSentiments.length || 1;
+            
+            return {
+              ...prev,
+              commentSentiments: newCommentSentiments,
+              commentSentimentBreakdown: { 
+                positive: Math.round((pos/total)*100), 
+                neutral: Math.round((neu/total)*100), 
+                negative: Math.round((neg/total)*100) 
+              },
+            };
           });
           
-          const pos = newCommentSentiments.filter(s => s.sentiment === 'positive').length;
-          const neg = newCommentSentiments.filter(s => s.sentiment === 'negative').length;
-          const neu = newCommentSentiments.filter(s => s.sentiment === 'neutral').length;
-          const total = newCommentSentiments.length || 1;
-          
-          return {
-            ...prev,
-            commentSentiments: newCommentSentiments,
-            commentSentimentBreakdown: { 
-              positive: Math.round((pos/total)*100), 
-              neutral: Math.round((neu/total)*100), 
-              negative: Math.round((neg/total)*100) 
-            },
-          };
-        });
+          setVisibleComments(prev => prev + timedResult.lastCommentIdx);
+        } else {
+          setVisibleComments(prev => prev + 10);
+        }
       } catch (e) {
         console.error("Failed to analyze more comments:", e);
+        setVisibleComments(prev => prev + 10);
       } finally {
         setIsAnalyzingMoreComments(false);
       }
+    } else {
+      setVisibleComments(prev => prev + 10);
     }
-    setVisibleComments(nextLimit);
   };
 
 
