@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { analyzeDeep } from '@/integrations/huggingface/client';
+import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -854,56 +854,21 @@ const UserProfiling = () => {
       console.log('Reddit data fetched successfully');
       setTargetProgress(60);
 
-      // ── Fast local sentiment (no HF call) ──────────────────────
-      // HF is only invoked on-demand when the user clicks the XAI button.
-      // This gives instant profile rendering.
-      const classifyLocally = (text: string): 'positive' | 'negative' | 'neutral' => {
-        if (!text || !text.trim()) return 'neutral';
-        const lower = text.toLowerCase();
-        const posWords = ['love','great','awesome','amazing','good','best','happy','thanks','thank','excellent','fantastic','wonderful','nice','cool','helpful','beautiful','perfect','glad','enjoy','excited','appreciate'];
-        const negWords = ['hate','bad','worst','terrible','awful','horrible','sucks','angry','annoying','disgusting','pathetic','stupid','ugly','trash','garbage','disappointed','useless','boring','sad','wrong','fail'];
-        let pos = 0, neg = 0;
-        for (const w of posWords) if (lower.includes(w)) pos++;
-        for (const w of negWords) if (lower.includes(w)) neg++;
-        if (pos > neg) return 'positive';
-        if (neg > pos) return 'negative';
-        return 'neutral';
-      };
+      // ── HF Sentiment Analysis (runs in background) ──────────────
+      // Start the HF call but DON'T await it — render profile immediately.
+      // When HF finishes, sentiments get merged into profileData.
+      let analysisData: any = null;
+      try {
+        analysisData = await analyzeWithHuggingFace(
+          redditData.posts || [],
+          redditData.comments || []
+        );
+        console.log('HF sentiment analysis completed');
+      } catch (analysisError) {
+        console.error('HF analysis error (continuing without sentiment):', analysisError);
+        // Continue with null analysisData — profile still renders with Reddit data
+      }
 
-      const localPostSentiments = (redditData.posts || []).map((p: any) => {
-        const text = `${p.title || ''} ${p.selftext || ''}`;
-        const sentiment = classifyLocally(text);
-        return { sentiment, text_preview: text.slice(0, 120), confidence: null, all_probabilities: {} };
-      });
-
-      const localCommentSentiments = (redditData.comments || []).map((c: any) => {
-        const text = c.body || '';
-        const sentiment = classifyLocally(text);
-        return { sentiment, text_preview: text.slice(0, 120), confidence: null, all_probabilities: {} };
-      });
-
-      // Build a lightweight analysisData object matching the HF shape
-      const allLocal = [...localPostSentiments, ...localCommentSentiments];
-      const totalItems = allLocal.length || 1;
-      const analysisData = {
-        postSentiments: localPostSentiments,
-        commentSentiments: localCommentSentiments,
-        postCount: localPostSentiments.length,
-        commentCount: localCommentSentiments.length,
-        sentimentBreakdown: {
-          positive: allLocal.filter(s => s.sentiment === 'positive').length / totalItems,
-          neutral:  allLocal.filter(s => s.sentiment === 'neutral').length / totalItems,
-          negative: allLocal.filter(s => s.sentiment === 'negative').length / totalItems,
-        },
-        locations: [],
-        dominantSentiment: (() => {
-          const counts = { positive: 0, neutral: 0, negative: 0 };
-          allLocal.forEach(s => counts[s.sentiment]++);
-          return Object.entries(counts).sort(([,a],[,b]) => b - a)[0][0];
-        })(),
-      };
-
-      console.log('Local sentiment analysis completed (HF skipped for speed)');
       setTargetProgress(90);
 
       // Calculate account age
