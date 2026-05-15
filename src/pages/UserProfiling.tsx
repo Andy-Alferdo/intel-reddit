@@ -878,7 +878,8 @@ const UserProfiling = () => {
         
         analysisData = {
           postSentiments: timedResult.postSentiments,
-          commentSentiments: timedResult.commentSentiments
+          commentSentiments: timedResult.commentSentiments,
+          locations: timedResult.locations || []
         };
         
         initialVisiblePosts = Math.max(INITIAL_VISIBLE, timedResult.lastPostIdx);
@@ -1063,7 +1064,7 @@ const UserProfiling = () => {
           const total = comments.length;
           return { positive: Math.round((pos/total)*100), neutral: Math.round((neu/total)*100), negative: Math.round((neg/total)*100) };
         })(),
-        locationIndicators: analysisData?.locations || ['No specific locations detected'],
+        locationIndicators: (analysisData?.locations?.length > 0) ? analysisData.locations : ['No specific locations detected'],
         behaviorPatterns: (() => {
           // Derive topic interests from subreddit activity
           const subCounts: Record<string, number> = {};

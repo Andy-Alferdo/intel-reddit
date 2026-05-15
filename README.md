@@ -1,109 +1,210 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+<div align="center">
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+# 🕵️ Intel-Reddit
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+### **AI-Powered Reddit OSINT & Forensic Intelligence Platform**
 
-## Features
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-intel--reddit.vercel.app-blue?style=for-the-badge)](https://intel-reddit.vercel.app)
+[![Model](https://img.shields.io/badge/🤗_AI_Model-Hugging_Face-yellow?style=for-the-badge)](https://huggingface.co/spaces/Takeda-Shingen/intel-reddit-analyzer)
+[![Built With](https://img.shields.io/badge/Built_With-React_+_TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactjs.org)
+[![Supabase](https://img.shields.io/badge/Backend-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+<br />
 
-## Demo
+> **Transform raw Reddit data into actionable intelligence.**  
+> Intel-Reddit combines NLP-driven sentiment analysis, network graph forensics, and behavioral profiling to deliver a complete OSINT investigation suite — powered by a custom fine-tuned DistilBERT model.
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+<br />
 
-## Deploy to Vercel
+</div>
 
-Vercel deployment will guide you through creating a Supabase account and project.
+---
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+## ⚡ Key Capabilities
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+<table>
+<tr>
+<td width="50%">
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+### 🧠 User Profiling & Behavioral Analysis
+- **AI Sentiment Classification** — Every post & comment classified as Positive / Neutral / Negative using a custom DistilBERT model
+- **Explainable AI (XAI)** — Gradient-based word-level saliency maps showing *why* the model made each prediction
+- **Deep Analysis Mode** — One-click drill-down into any post/comment with word importance visualization
+- **Location Intelligence** — spaCy NER extracts geographic indicators (GPE/LOC entities) from user content
+- **Behavioral Patterns** — Identifies active communities, posting rhythms, and engagement patterns
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+</td>
+<td width="50%">
 
-## Clone and run locally
+### 🔗 Link & Network Analysis
+- **Community Network Graphs** — Interactive force-directed graphs mapping user-to-subreddit connections
+- **Cross-Community Detection** — Identifies users operating across multiple communities
+- **Subreddit Relationship Mapping** — Visualize how subreddits are connected through shared user bases
+- **Related Communities Discovery** — Automatically discover related subreddits through user overlap analysis
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+</td>
+</tr>
+<tr>
+<td width="50%">
 
-2. Create a Next.js app using the Supabase Starter template npx command
+### 📊 Community Intelligence
+- **Subreddit Deep Dive** — Analyze sentiment trends, hot topics, and community mood across any subreddit
+- **Keyword Analysis Dashboard** — Real-time keyword tracking with sentiment distribution and trend detection
+- **Unified Intelligence Feed** — Aggregated view of posts/comments with inline sentiment badges and XAI explanations
+- **Treemap Visualization** — Visual representation of a user's top communities by activity volume
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
+</td>
+<td width="50%">
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
+### 📋 Investigation & Reporting
+- **Case Management** — Create, manage, and organize OSINT investigation cases
+- **Saved Analysis History** — Persist analyzed profiles and communities for future reference
+- **PDF/HTML Report Generation** — Export comprehensive intelligence reports with charts, sentiment breakdowns, and findings
+- **Real-Time Monitoring** — Set up keyword and user monitoring alerts
+- **Admin Dashboard** — Full administrative control with usage analytics
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+</td>
+</tr>
+</table>
 
-3. Use `cd` to change into the app's directory
+---
 
-   ```bash
-   cd with-supabase-app
-   ```
+## 🏗️ Architecture
 
-4. Rename `.env.example` to `.env.local` and update the following:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (React + Vite)                  │
+│  ┌──────────┐ ┌───────────┐ ┌──────────┐ ┌──────────────────┐  │
+│  │  User     │ │ Community │ │  Link    │ │  Keyword         │  │
+│  │ Profiling │ │ Analysis  │ │ Analysis │ │  Analysis        │  │
+│  └─────┬────┘ └─────┬─────┘ └────┬─────┘ └────────┬─────────┘  │
+│        │             │            │                 │            │
+│        └─────────────┴────────────┴─────────────────┘            │
+│                              │                                   │
+├──────────────────────────────┼───────────────────────────────────┤
+│              Supabase Edge Functions (Reddit API Proxy)          │
+│                    reddit-scraper / OAuth2 PKCE                  │
+├──────────────────────────────┼───────────────────────────────────┤
+│          ┌───────────────────┴───────────────────────┐           │
+│          │     Hugging Face Inference Space           │           │
+│          │  ┌─────────────────────────────────────┐  │           │
+│          │  │  DistilBERT (fine-tuned, 3-class)   │  │           │
+│          │  │  + spaCy NER (location extraction)  │  │           │
+│          │  │  + Gradient Saliency (XAI)          │  │           │
+│          │  └─────────────────────────────────────┘  │           │
+│          └───────────────────────────────────────────┘           │
+├──────────────────────────────────────────────────────────────────┤
+│                   Supabase (PostgreSQL + Auth + Storage)          │
+│     Cases │ Profiles │ Analyses │ Reddit Content │ Monitoring    │
+└──────────────────────────────────────────────────────────────────┘
+```
 
-  ```env
-  NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
-  ```
-  > [!NOTE]
-  > This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
-  > Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
-  > See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
+---
 
-  Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
+## 🧪 AI Model Details
 
-5. You can now run the Next.js local development server:
+| Component | Details |
+|-----------|---------|
+| **Base Model** | `DistilBERT` (6 layers, 768 dim) fine-tuned for sequence classification |
+| **Classes** | `negative` · `neutral` · `positive` |
+| **Tokenizer** | `BertTokenizerFast` with 512 max length |
+| **XAI Method** | Gradient × Embedding saliency (single backward pass) |
+| **Location Extraction** | spaCy `en_core_web_sm` — GPE/LOC entity recognition |
+| **Deployment** | Hugging Face Spaces (Gradio, CPU) |
+| **Endpoints** | `/analyze_reddit_content` · `/analyze_sentiment` · `/deep_analyze` · `/predict` |
 
-   ```bash
-   npm run dev
-   ```
+---
 
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
+## 🚀 Quick Start
 
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
+### Prerequisites
 
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+- **Node.js** 18+ and **npm**
+- A [Supabase](https://supabase.com) project
+- Reddit API credentials (for the Edge Function scraper)
 
-## Feedback and issues
+### Installation
 
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
+```bash
+# Clone the repository
+git clone https://github.com/Andy-Alferdo/intel-reddit.git
+cd intel-reddit
 
-## More Supabase examples
+# Install dependencies
+npm install
 
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+# Configure environment
+cp .env.example .env.local
+```
+
+### Environment Variables
+
+```env
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+VITE_HF_SPACE_URL=https://takeda-shingen-intel-reddit-analyzer.hf.space
+```
+
+### Development
+
+```bash
+npm run dev
+```
+
+The app will be running at [localhost:8080](http://localhost:8080).
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 18, TypeScript, Vite |
+| **UI** | shadcn/ui, Tailwind CSS, Recharts, Lucide Icons |
+| **Backend** | Supabase (PostgreSQL, Edge Functions, Auth, RLS) |
+| **AI/ML** | DistilBERT (PyTorch), spaCy, Gradio |
+| **Data** | Reddit API (OAuth2), Supabase Edge Functions |
+| **Visualizations** | Force-directed graphs, Treemaps, Donut charts, Word clouds, Sparklines |
+| **Deployment** | Vercel (frontend), Hugging Face Spaces (AI model) |
+
+---
+
+## 📁 Project Structure
+
+```
+intel-reddit/
+├── src/
+│   ├── pages/               # Main application pages
+│   │   ├── UserProfiling     # Reddit user behavioral analysis
+│   │   ├── Analysis          # Community sentiment analysis
+│   │   ├── LinkAnalysis      # Network graph forensics
+│   │   ├── CommunityAnalysis # Subreddit deep dive
+│   │   ├── Monitoring        # Real-time alert system
+│   │   ├── Dashboard         # Investigation hub
+│   │   └── Report            # Intelligence report generation
+│   ├── components/           # Reusable UI components
+│   │   ├── keyword-analysis/ # Keyword tracking dashboard
+│   │   ├── monitoring/       # Alert monitoring widgets
+│   │   └── ui/               # shadcn/ui primitives
+│   ├── integrations/
+│   │   └── huggingface/      # Gradio client for AI model
+│   ├── contexts/             # React context (auth, cases, investigation)
+│   ├── hooks/                # Custom React hooks
+│   ├── lib/                  # Report generator, utilities
+│   └── utils/                # Helper functions
+├── supabase/
+│   └── functions/            # Edge Functions (reddit-scraper)
+└── public/                   # Static assets
+```
+
+---
+
+## 📜 License
+
+This project is developed as a Final Year Project (FYP) for academic purposes.
+
+---
+
+<div align="center">
+  <sub>Built with ☕ and curiosity — Intel-Reddit © 2026</sub>
+</div>

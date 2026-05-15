@@ -128,6 +128,9 @@ export async function analyzeWithTimeout(
     commentSentiments: [] as any[],
   };
   
+  // Accumulate locations across all chunks (deduplicated)
+  const locationsSet = new Set<string>();
+  
   const startTime = performance.now();
   let pIdx = 0;
   let cIdx = 0;
@@ -151,6 +154,13 @@ export async function analyzeWithTimeout(
       result.postSentiments.push(...(chunkResult.postSentiments || []));
       result.commentSentiments.push(...(chunkResult.commentSentiments || []));
       
+      // Accumulate locations from this chunk (skip placeholder messages)
+      (chunkResult.locations || []).forEach(loc => {
+        if (loc && loc !== 'No specific locations detected' && loc !== 'Location detection failed') {
+          locationsSet.add(loc);
+        }
+      });
+      
       pIdx += pChunk.length;
       cIdx += cChunk.length;
     } catch (e) {
@@ -162,6 +172,7 @@ export async function analyzeWithTimeout(
   return {
     postSentiments: result.postSentiments,
     commentSentiments: result.commentSentiments,
+    locations: Array.from(locationsSet),
     lastPostIdx: pIdx,
     lastCommentIdx: cIdx
   };
