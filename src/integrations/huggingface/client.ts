@@ -116,12 +116,14 @@ export async function analyzeWithHuggingFace(
  * @param posts Array of Reddit posts
  * @param comments Array of Reddit comments
  * @param maxTimeMs Maximum time in milliseconds to spend analyzing
+ * @param onLocationsFound Optional callback invoked with new locations after each chunk
  * @returns Progressively analyzed results with tracking indices
  */
 export async function analyzeWithTimeout(
   posts: any[], 
   comments: any[], 
-  maxTimeMs: number
+  maxTimeMs: number,
+  onLocationsFound?: (locations: string[]) => void
 ) {
   const result = {
     postSentiments: [] as any[],
@@ -155,11 +157,20 @@ export async function analyzeWithTimeout(
       result.commentSentiments.push(...(chunkResult.commentSentiments || []));
       
       // Accumulate locations from this chunk (skip placeholder messages)
+      let newLocationsFound = false;
       (chunkResult.locations || []).forEach(loc => {
         if (loc && loc !== 'No specific locations detected' && loc !== 'Location detection failed') {
-          locationsSet.add(loc);
+          if (!locationsSet.has(loc)) {
+            locationsSet.add(loc);
+            newLocationsFound = true;
+          }
         }
       });
+
+      // Notify caller of updated locations for progressive UI updates
+      if (newLocationsFound && onLocationsFound) {
+        onLocationsFound(Array.from(locationsSet));
+      }
       
       pIdx += pChunk.length;
       cIdx += cChunk.length;

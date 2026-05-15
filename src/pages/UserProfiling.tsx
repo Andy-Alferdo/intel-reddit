@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { analyzeDeep, analyzeWithHuggingFace, analyzeWithTimeout } from '@/integrations/huggingface/client';
+import { extractLocationsFromContent, filterHfLocations, mergeLocations } from '@/utils/locationExtractor';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -357,6 +358,7 @@ const UserProfiling = () => {
   const { toast } = useToast();
   const { addUserProfile, saveUserProfileToDb, saveRedditContentToDb, currentCase } = useInvestigation();
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
+  const [detectedLocations, setDetectedLocations] = useState<string[]>([]);
 
   // Per-item deep analysis state
   const [deepAnalysisStates, setDeepAnalysisStates] = useState<Map<string, { isAnalyzing: boolean; result: any; showDeep: boolean; analysisType?: 'lime' | 'shap' }>>(new Map());
@@ -825,6 +827,7 @@ const UserProfiling = () => {
     setIsLoading(true);
     setError(null);
     setProfileData(null);
+    setDetectedLocations([]);
     setVisiblePosts(INITIAL_VISIBLE);
     setVisibleComments(INITIAL_VISIBLE);
     setLoadingProgress(0);
@@ -861,6 +864,14 @@ const UserProfiling = () => {
       console.log(`[Perf] Reddit data fetched successfully in ${(perfReddit - perfStart).toFixed(2)}ms`);
       setTargetProgress(60);
 
+      // ── Local Location Extraction (instant, runs on ALL data) ──────────
+      const localLocations = extractLocationsFromContent(
+        redditData.posts || [],
+        redditData.comments || []
+      );
+      console.log(`[Perf] Local location extraction found: ${localLocations.join(', ') || 'none'}`);
+      setDetectedLocations(localLocations);
+
       // ── HF Sentiment Analysis (30-second timer batching) ──────────────
       let analysisData: any = null;
       let initialVisiblePosts = INITIAL_VISIBLE;
@@ -873,13 +884,26 @@ const UserProfiling = () => {
         const timedResult = await analyzeWithTimeout(
           redditData.posts || [],
           redditData.comments || [],
-          30000 // 30 seconds max
+          30000, // 30 seconds max
+          // Progressive location callback — merge HF locations into state as they arrive
+          (hfLocations) => {
+            const filtered = filterHfLocations(hfLocations);
+            setDetectedLocations(prev => {
+              const merged = mergeLocations(prev, filtered);
+              return merged.length !== prev.length ? merged : prev;
+            });
+          }
         );
         
+        // Final merge: local + all filtered HF locations
+        const finalHfLocations = filterHfLocations(timedResult.locations || []);
+        const mergedLocations = mergeLocations(localLocations, finalHfLocations);
+        setDetectedLocations(mergedLocations);
+
         analysisData = {
           postSentiments: timedResult.postSentiments,
           commentSentiments: timedResult.commentSentiments,
-          locations: timedResult.locations || []
+          locations: mergedLocations
         };
         
         initialVisiblePosts = Math.max(INITIAL_VISIBLE, timedResult.lastPostIdx);
@@ -889,6 +913,8 @@ const UserProfiling = () => {
         console.log(`[Perf] HF sentiment analysis completed in ${(hfEnd - hfStart).toFixed(2)}ms. Analyzed ${timedResult.lastPostIdx} posts and ${timedResult.lastCommentIdx} comments.`);
       } catch (analysisError) {
         console.error('[Perf] HF analysis error (continuing without sentiment):', analysisError);
+        // Even if HF fails, we still have local locations
+        analysisData = { locations: localLocations };
       }
 
       setTargetProgress(90);
@@ -1932,7 +1958,7 @@ const UserProfiling = () => {
                           <Info className="h-3 w-3 text-slate-400 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="max-w-xs text-xs">AI-detected location signals from posts, comments, and language patterns.</p>
+                          <p className="max-w-xs text-xs">Locations are extracted from subreddit names, post titles, and comment text. Results update progressively as more content is analyzed by the AI model.</p>
                         </TooltipContent>
                       </Tooltip>
                     </CardTitle>
