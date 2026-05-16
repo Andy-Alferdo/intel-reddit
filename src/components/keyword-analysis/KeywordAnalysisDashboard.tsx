@@ -25,6 +25,7 @@ import { useMonitoring } from '@/contexts/MonitoringContext';
 import { useNavigate } from 'react-router-dom';
 import { analyzeDeep, analyzeWithHuggingFace, analyzeWithTimeout } from '@/integrations/huggingface/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface SentimentItem {
   text: string;
@@ -255,12 +256,14 @@ const PostCard = ({
   post, 
   deepAnalysisState, 
   onRequestDeepAnalysis,
-  onToggleDeepAnalysis 
+  onToggleDeepAnalysis,
+  onPreview
 }: { 
   post: Post;
   deepAnalysisState?: { isAnalyzing: boolean; result: any; showDeep: boolean };
   onRequestDeepAnalysis: (text: string, postId: string) => void;
   onToggleDeepAnalysis: (postId: string) => void;
+  onPreview: (post: Post) => void;
 }) => {
   const [showBasicXAI, setShowBasicXAI] = useState(false);
 
@@ -351,7 +354,10 @@ const PostCard = ({
           </div>
 
           {/* Title */}
-          <h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors break-words">
+          <h3 
+            className="text-sm font-semibold text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors cursor-pointer break-words"
+            onClick={() => onPreview(post)}
+          >
             {post.title}
           </h3>
 
@@ -463,6 +469,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
   const [savedKeywords, setSavedKeywords] = useState<any[]>([]);
   // Per-post deep analysis state - matching User Profiling
   const [deepAnalysisStates, setDeepAnalysisStates] = useState<Map<string, { isAnalyzing: boolean; result: any; showDeep: boolean }>>(new Map());
+  const [previewPost, setPreviewPost] = useState<Post | null>(null);
   const { toast } = useToast();
   const { addKeywordAnalysis, saveKeywordAnalysisToDb, saveRedditContentToDb, currentCase } = useInvestigation();
   const { targets } = useMonitoring();
@@ -1118,6 +1125,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                             deepAnalysisState={deepAnalysisStates.get(post.id || String(index))}
                             onRequestDeepAnalysis={handleDeepAnalysis}
                             onToggleDeepAnalysis={toggleDeepAnalysis}
+                            onPreview={(p) => setPreviewPost(p)}
                           />
                         ))
                       ) : (
@@ -1459,6 +1467,48 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
           )}
         </>
       )}
+      {/* Post Preview Dialog - like Monitoring */}
+      <Dialog open={!!previewPost} onOpenChange={(open) => !open && setPreviewPost(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-xl border-blue-100 shadow-xl">
+          <DialogHeader className="border-b border-blue-50 pb-3">
+            <DialogTitle className="text-base leading-snug flex items-center gap-2">
+              <span className="p-1 bg-blue-50 rounded text-blue-600">📄</span>
+              Post Preview
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 pt-1">
+              <Badge variant="outline" className="text-[10px] bg-slate-50">{previewPost?.subreddit}</Badge>
+              <span className="text-[10px] text-muted-foreground">{formatTimestamp(previewPost?.created_utc)}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <p className="sr-only">Previewing post {previewPost?.title}</p>
+          <ScrollArea className="flex-1 max-h-[50vh] mt-4">
+            <div className="space-y-4 pr-4">
+              <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewPost?.title}</h3>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground font-medium">by</span>
+                <span className="text-blue-600 font-semibold">u/{previewPost?.author}</span>
+                <Badge variant="secondary" className="text-[10px] ml-auto bg-slate-100">▲ {previewPost?.score}</Badge>
+              </div>
+              {previewPost?.selftext ? (
+                <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
+                  {previewPost.selftext}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic bg-slate-50 p-3 rounded-lg border border-dashed">No additional content available.</p>
+              )}
+            </div>
+          </ScrollArea>
+          <div className="pt-4 mt-2 border-t border-slate-100">
+            <Button 
+              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-all shadow-blue-200"
+              onClick={() => window.open(`https://reddit.com${previewPost?.permalink}`, '_blank')}
+            >
+              <ExternalLink className="h-4 w-4" />
+              View on Reddit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

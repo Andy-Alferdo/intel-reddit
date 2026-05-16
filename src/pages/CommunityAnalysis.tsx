@@ -13,6 +13,9 @@ import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useInvestigation } from "@/contexts/InvestigationContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ExternalLink } from "lucide-react";
 
 interface SubredditData {
   display_name: string;
@@ -54,6 +57,7 @@ const CommunityAnalysis = () => {
   const [posts, setPosts] = useState<RedditPost[]>([]);
   const [relatedSubreddits, setRelatedSubreddits] = useState<RelatedSub[]>([]);
   const [activeUsers, setActiveUsers] = useState(0);
+  const [previewPost, setPreviewPost] = useState<RedditPost | null>(null);
   
   // Ref to store pending navigation actions
   const pendingNavRef = useRef<{ prefillCommunity: string; viewOnly?: boolean; autoAnalyze?: boolean } | null>(null);
@@ -442,24 +446,16 @@ const CommunityAnalysis = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {recentPosts.map((post, i) => (
-                    <a
+                    <div
                       key={i}
-                      href={`https://www.reddit.com${post.permalink}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block border border-border/50 rounded-lg p-3 space-y-2 hover:bg-accent/50 transition-colors"
+                      className="block border border-border/50 rounded-lg p-3 space-y-2 hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => setPreviewPost(post)}
                     >
                       <h4 className="font-medium text-sm leading-tight line-clamp-2">{post.title}</h4>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <a 
-                          href={`https://reddit.com/u/${post.author}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <span className="hover:text-primary transition-colors">
                           by u/{post.author}
-                        </a>
+                        </span>
                         <span>{formatTimestamp(post.created_utc)}</span>
                       </div>
                       {/* Reddit-style Voting Bar */}
@@ -487,7 +483,7 @@ const CommunityAnalysis = () => {
                         </div>
                         <Badge variant="outline" className="text-xs">{post.num_comments} comments</Badge>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </CardContent>
               </Card>
@@ -513,12 +509,10 @@ const CommunityAnalysis = () => {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {topPosts.map((post, i) => (
-                    <a
+                    <div
                       key={i}
-                      href={`https://www.reddit.com${post.permalink}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-3 border border-border/50 rounded-lg p-3 hover:bg-accent/50 transition-colors"
+                      className="flex items-start gap-3 border border-border/50 rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => setPreviewPost(post)}
                     >
                       <span className="text-lg font-bold text-primary min-w-[28px]">#{i + 1}</span>
                       <div className="flex-1 min-w-0">
@@ -546,18 +540,12 @@ const CommunityAnalysis = () => {
                               </svg>
                             </button>
                           </div>
-                          <a 
-                            href={`https://reddit.com/u/${post.author}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <span className="text-xs text-muted-foreground hover:text-primary transition-colors">
                             u/{post.author}
-                          </a>
+                          </span>
                         </div>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </CardContent>
               </Card>
@@ -626,6 +614,50 @@ const CommunityAnalysis = () => {
           </Card>
         )}
       </div>
+
+      {/* Post Preview Dialog - like Monitoring */}
+      <Dialog open={!!previewPost} onOpenChange={(open) => !open && setPreviewPost(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-xl border-primary/20 shadow-xl">
+          <DialogHeader className="border-b border-primary/10 pb-3">
+            <DialogTitle className="text-base leading-snug flex items-center gap-2">
+              <span className="p-1 bg-primary/10 rounded text-primary">📄</span>
+              Post Preview
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 pt-1">
+              <Badge variant="outline" className="text-[10px] bg-accent/30">{previewPost?.subreddit}</Badge>
+              <span className="text-[10px] text-muted-foreground">
+                {previewPost?.created_utc ? format(new Date(previewPost.created_utc * 1000), 'MMM d, yyyy | hh:mm a') : ''}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 max-h-[50vh] mt-4">
+            <div className="space-y-4 pr-4">
+              <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewPost?.title}</h3>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground font-medium">by</span>
+                <span className="text-primary font-semibold">u/{previewPost?.author}</span>
+                <Badge variant="secondary" className="text-[10px] ml-auto">▲ {previewPost?.score}</Badge>
+              </div>
+              {previewPost?.selftext ? (
+                <div className="text-sm text-muted-foreground leading-relaxed bg-accent/20 p-3 rounded-lg border border-border/50 whitespace-pre-wrap">
+                  {previewPost.selftext}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic bg-accent/10 p-3 rounded-lg border border-dashed border-border/50">No additional content available.</p>
+              )}
+            </div>
+          </ScrollArea>
+          <div className="pt-4 mt-2 border-t border-border/50">
+            <Button 
+              className="w-full gap-2 rounded-lg"
+              onClick={() => window.open(`https://reddit.com${previewPost?.permalink}`, '_blank')}
+            >
+              <ExternalLink className="h-4 w-4" />
+              View on Reddit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

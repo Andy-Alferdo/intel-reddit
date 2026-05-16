@@ -1421,7 +1421,10 @@ const Analysis = () => {
                                         </div>
                                         
                                         {/* Post Title - Blue link style */}
-                                        <h3 className="text-blue-400 hover:text-blue-300 cursor-pointer mt-2 text-sm font-medium">
+                                        <h3 
+                                          className="text-blue-400 hover:text-blue-300 cursor-pointer mt-2 text-sm font-medium"
+                                          onClick={() => setPreviewPost(post)}
+                                        >
                                           {post.title}
                                         </h3>
                                         
@@ -1462,7 +1465,8 @@ const Analysis = () => {
                                                 {/* WORD SIGNALS Section - Only show when expanded */}
                                                 {isExpanded && (() => {
                                                   // Use deep analysis data if available, otherwise fall back to regular explanation
-                                                  const deepWC = deepAnalysisData[index]?.word_contributions;
+                                                  const postId = post.id || String(index);
+                                                  const deepWC = deepAnalysisData[postId]?.word_contributions;
                                                   const rawWC = deepWC?.length > 0 ? deepWC : explanation?.word_contributions;
                                                   const normalizedWC: { word: string; contribution: number }[] = rawWC
                                                     ? Array.isArray(rawWC)
@@ -1537,9 +1541,9 @@ const Analysis = () => {
                                                     variant="outline"
                                                     size="sm"
                                                     className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
-                                                    disabled={loadingDeepAnalysis[post.id || index]}
+                                                    disabled={loadingDeepAnalysis[post.id || String(index)]}
                                                     onClick={() => {
-                                                      const postId = post.id || index;
+                                                      const postId = post.id || String(index);
                                                       const newExpanded = new Set(expandedEvidence);
                                                       const isCurrentlyExpanded = newExpanded.has(index);
                                                       
@@ -1557,7 +1561,7 @@ const Analysis = () => {
                                                       setExpandedEvidence(newExpanded);
                                                     }}
                                                   >
-                                                    {loadingDeepAnalysis[post.id || index] ? (
+                                                    {loadingDeepAnalysis[post.id || String(index)] ? (
                                                       <>
                                                         <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
                                                         Analyzing...
@@ -2196,7 +2200,9 @@ const Analysis = () => {
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 pt-1">
               <Badge variant="outline" className="text-xs">{previewPost?.subreddit}</Badge>
-              <span className="text-xs">{previewPost?.timestamp}</span>
+              <span className="text-xs">
+                {previewPost?.timestamp || (previewPost?.created_utc ? new Date(previewPost.created_utc * 1000).toLocaleString() : '')}
+              </span>
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 max-h-[50vh]">
