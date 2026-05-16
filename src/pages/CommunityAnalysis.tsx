@@ -517,6 +517,9 @@ const CommunityAnalysis = () => {
                       <span className="text-lg font-bold text-primary min-w-[28px]">#{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-sm leading-tight line-clamp-2">{post.title}</h4>
+                        {post.selftext && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{post.selftext}</p>
+                        )}
                         {/* Reddit-style Voting Bar */}
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex items-center gap-1 bg-muted rounded-full px-2 py-1">

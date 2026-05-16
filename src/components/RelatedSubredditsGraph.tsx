@@ -332,10 +332,10 @@ export const RelatedSubredditsGraph = ({
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Background
+      // Background - light slate to match LinkAnalysis design
       const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, width / 2);
-      bg.addColorStop(0, 'rgba(15, 23, 42, 1)');
-      bg.addColorStop(1, 'rgba(2, 6, 23, 1)');
+      bg.addColorStop(0, 'rgba(248, 250, 252, 1)');
+      bg.addColorStop(1, 'rgba(241, 245, 249, 1)');
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, width, height);
 
@@ -346,7 +346,7 @@ export const RelatedSubredditsGraph = ({
         const s = 1 + Math.sin(Date.now() * 0.002 + i) * 0.5;
         ctx.beginPath();
         ctx.arc(x, y, s, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(139, 92, 246, ${0.1 + Math.sin(Date.now() * 0.001 + i) * 0.05})`;
+        ctx.fillStyle = `rgba(59, 130, 246, ${0.15 + Math.sin(Date.now() * 0.001 + i) * 0.08})`;
         ctx.fill();
       }
 
@@ -358,8 +358,8 @@ export const RelatedSubredditsGraph = ({
       // Links
       links.forEach(link => {
         const gradient = ctx.createLinearGradient(link.source.x, link.source.y, link.target.x, link.target.y);
-        gradient.addColorStop(0, nodeColors.center.start + '60');
-        gradient.addColorStop(1, nodeColors.related.start + '60');
+        gradient.addColorStop(0, nodeColors.center.start);
+        gradient.addColorStop(1, nodeColors.related.start);
         ctx.beginPath();
         ctx.moveTo(link.source.x, link.source.y);
         ctx.lineTo(link.target.x, link.target.y);
@@ -374,7 +374,7 @@ export const RelatedSubredditsGraph = ({
         const py = link.source.y + (link.target.y - link.source.y) * pp;
         ctx.beginPath();
         ctx.arc(px, py, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.8)';
         ctx.fill();
       });
 
@@ -428,11 +428,14 @@ export const RelatedSubredditsGraph = ({
         const lbl = `r/${node.label}`;
         const lw = ctx.measureText(lbl).width + 12;
         const ly = node.y + s + 8;
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.beginPath();
         ctx.roundRect(node.x - lw / 2, ly - 2, lw, 20, 4);
         ctx.fill();
-        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#1e293b';
         ctx.fillText(lbl, node.x, ly + 2);
       });
 
@@ -441,11 +444,14 @@ export const RelatedSubredditsGraph = ({
       // Zoom indicator
       const scale = transformRef.current.scale;
       if (Math.abs(scale - 1) > 0.01) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.beginPath();
         ctx.roundRect(width - 80, 10, 70, 24, 6);
         ctx.fill();
-        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#1e293b';
         ctx.font = '11px system-ui';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';

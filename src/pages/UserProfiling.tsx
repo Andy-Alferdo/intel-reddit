@@ -244,9 +244,9 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   const CustomTreemapContent = (props: any) => {
     const { x, y, width, height, name, size, fill } = props;
 
-    // Hide labels if block is too small
-    const showLabel = width > 40 && height > 30;
-    const showCount = width > 50 && height > 45;
+    // Hide labels if block is too small - lowered thresholds to show all community names
+    const showLabel = width > 25 && height > 20;
+    const showCount = width > 35 && height > 30;
 
     // Calculate font sizes based on block size
     const nameFontSize = Math.max(8, Math.min(14, width / 8));
@@ -1504,9 +1504,15 @@ const UserProfiling = () => {
             {!isPost && item.link_title && (
               <p className="text-xs text-slate-500 line-clamp-1 mb-1">{item.link_title}</p>
             )}
-            <p className="text-sm text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors">
-              {item.text || item.body || (isPost ? '(no text)' : '(comment unavailable)')}
-            </p>
+            {isPost && item.title ? (
+              <p className="text-sm text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors font-medium">
+                {item.title}
+              </p>
+            ) : (
+              <p className="text-sm text-foreground line-clamp-2 mb-1.5 group-hover:text-blue-400 transition-colors">
+                {item.text || item.body || (isPost ? '(no text)' : '(comment unavailable)')}
+              </p>
+            )}
             {isPost && item.body && (
               <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{item.body}</p>
             )}
@@ -2404,13 +2410,8 @@ const UserProfiling = () => {
                 </Badge>
               </div>
               <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
-                {previewItem?.text || previewItem?.body || (previewItem?.isPost ? '(no text)' : '(comment unavailable)')}
+                {previewItem?.isPost && previewItem?.body ? previewItem.body : (previewItem?.text || previewItem?.body || (previewItem?.isPost ? '(no text)' : '(comment unavailable)'))}
               </div>
-              {previewItem?.isPost && previewItem?.body && previewItem.body !== previewItem.text && (
-                <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
-                  {previewItem.body}
-                </div>
-              )}
             </div>
           </ScrollArea>
           <div className="pt-4 mt-2 border-t border-slate-100">
