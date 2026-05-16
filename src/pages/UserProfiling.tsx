@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { analyzeDeep, analyzeWithHuggingFace, analyzeWithTimeout } from '@/integrations/huggingface/client';
 import { extractLocationsFromContent, filterHfLocations, mergeLocations } from '@/utils/locationExtractor';
 import { useLocation } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1765,7 +1765,10 @@ const UserProfiling = () => {
 
         {/* Page Header */}
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-2">User Profiling</h2>
+          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">
+            <User className="h-8 w-8 text-blue-600" />
+            User Profiling
+          </h1>
           <p className="text-muted-foreground">
             Open-Source Reddit User Intelligence, Profiling & Behavior Mapping
           </p>
@@ -1773,7 +1776,16 @@ const UserProfiling = () => {
 
         {/* Search Bar */}
         <Card className="border-border shadow-sm">
-          <CardContent className="p-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-blue-600" />
+              User Profiling
+            </CardTitle>
+            <CardDescription>
+              Enter a Reddit username to generate a forensic intelligence profile
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
             <div className="flex items-center gap-3">
               <div className="relative flex-1">
                 <Input
