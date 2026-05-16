@@ -1525,8 +1525,10 @@ const UserProfiling = () => {
                 {item.text || item.body || (isPost ? '(no text)' : '(comment unavailable)')}
               </p>
             )}
-            {isPost && item.body && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{item.body}</p>
+            {(isPost && (item.body || item.text || item.selftext)) && (
+              <p className="text-xs text-muted-foreground line-clamp-3 mb-2 leading-relaxed">
+                {item.body || item.text || item.selftext}
+              </p>
             )}
 
             {/* XAI Deep Analysis Panel — only shows when toggled */}
@@ -2427,7 +2429,7 @@ const UserProfiling = () => {
               </DialogDescription>
             </DialogHeader>
             <p className="sr-only">Detailed preview of the selected {previewItem?.isPost ? 'post' : 'comment'}.</p>
-            <ScrollArea className="flex-1 max-h-[50vh] mt-4">
+            <ScrollArea className="flex-1 max-h-[60vh] mt-4">
               <div className="space-y-4 pr-4">
                 {previewItem?.isPost && (
                   <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewItem?.title}</h3>
@@ -2444,8 +2446,10 @@ const UserProfiling = () => {
                   ▲ {previewItem?.score}
                 </Badge>
               </div>
-              <div className="text-sm text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
-                {previewItem?.isPost && previewItem?.body ? previewItem.body : (previewItem?.text || previewItem?.body || (previewItem?.isPost ? '(no text)' : '(comment unavailable)'))}
+              <div className="text-sm text-slate-700 leading-relaxed bg-white p-4 rounded-xl border border-slate-100 shadow-inner whitespace-pre-wrap font-medium">
+                {previewItem?.isPost 
+                  ? (previewItem?.body || previewItem?.text || previewItem?.selftext || '(no additional content available)') 
+                  : (previewItem?.text || previewItem?.body || '(comment unavailable)')}
               </div>
             </div>
           </ScrollArea>

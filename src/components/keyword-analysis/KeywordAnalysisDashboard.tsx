@@ -362,9 +362,9 @@ const PostCard = ({
           </h3>
 
           {/* Body Preview */}
-          {post.selftext && (
-            <p className="text-xs text-muted-foreground line-clamp-2 mb-2 break-words">
-              {post.selftext}
+          {(post.selftext || post.body || (post as any).text) && (
+            <p className="text-xs text-muted-foreground line-clamp-3 mb-2 leading-relaxed">
+              {post.selftext || post.body || (post as any).text}
             </p>
           )}
 
@@ -1480,7 +1480,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
             </DialogDescription>
           </DialogHeader>
           <p className="sr-only">Previewing post {previewPost?.title}</p>
-          <ScrollArea className="flex-1 max-h-[50vh] mt-4">
+          <ScrollArea className="flex-1 max-h-[60vh] mt-4">
             <div className="space-y-4 pr-4">
               <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewPost?.title}</h3>
               <div className="flex items-center gap-2 text-xs">
@@ -1488,12 +1488,12 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                 <span className="text-blue-600 font-semibold">u/{previewPost?.author}</span>
                 <Badge variant="secondary" className="text-[10px] ml-auto bg-slate-100">▲ {previewPost?.score}</Badge>
               </div>
-              {previewPost?.selftext ? (
-                <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
-                  {previewPost.selftext}
+              {previewPost?.selftext || previewPost?.body || (previewPost as any)?.text ? (
+                <div className="text-sm text-slate-700 leading-relaxed bg-white p-4 rounded-xl border border-slate-100 shadow-inner whitespace-pre-wrap font-medium">
+                  {previewPost.selftext || previewPost.body || (previewPost as any).text}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground italic bg-slate-50 p-3 rounded-lg border border-dashed">No additional content available.</p>
+                <p className="text-xs text-muted-foreground italic bg-slate-50 p-4 rounded-xl border border-dashed text-center">No additional content available.</p>
               )}
             </div>
           </ScrollArea>

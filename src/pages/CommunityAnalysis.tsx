@@ -738,9 +738,9 @@ const CommunityAnalysis = () => {
                                     >
                                       {post.title}
                                     </h4>
-                                    {post.selftext && (
-                                      <p className="text-sm text-slate-600 line-clamp-3 mb-3 leading-relaxed bg-slate-50/30 p-2 rounded border border-slate-100/50">
-                                        {post.selftext}
+                                    {(post.selftext || (post as any).body || (post as any).text) && (
+                                      <p className="text-sm text-slate-600 line-clamp-3 mb-3 leading-relaxed bg-slate-50/30 p-2.5 rounded-xl border border-slate-100/50">
+                                        {post.selftext || (post as any).body || (post as any).text}
                                       </p>
                                     )}
 
@@ -969,7 +969,7 @@ const CommunityAnalysis = () => {
             <h3 className="font-black text-xl leading-tight tracking-tight drop-shadow-sm line-clamp-3">{previewPost?.title}</h3>
           </div>
           
-          <ScrollArea className="flex-1 max-h-[50vh]">
+          <ScrollArea className="flex-1 max-h-[60vh]">
             <div className="p-6 space-y-6 pb-10">
               <div className="flex items-center gap-4 py-3 px-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-sm shadow-sm">
@@ -990,8 +990,8 @@ const CommunityAnalysis = () => {
               {previewPost?.selftext ? (
                 <div className="space-y-3">
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Content Intelligence</div>
-                  <div className="text-sm text-slate-700 leading-relaxed bg-white p-5 rounded-2xl border border-slate-200 shadow-sm whitespace-pre-wrap font-medium">
-                    {previewPost.selftext}
+                  <div className="text-sm text-slate-700 leading-relaxed bg-white p-6 rounded-2xl border border-slate-200 shadow-inner whitespace-pre-wrap font-medium">
+                    {previewPost.selftext || (previewPost as any).body || (previewPost as any).text}
                   </div>
                 </div>
               ) : (
