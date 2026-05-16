@@ -620,13 +620,13 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       if (sentiment in counts) counts[sentiment as keyof typeof counts]++;
     });
 
-    const total = uniquePosts.length || 1;
+    const total = targetPosts.length || 1;
     return [
       { name: 'Positive', value: Math.round((counts.positive / total) * 100), color: SENT_COLORS.positive },
       { name: 'Neutral', value: Math.round((counts.neutral / total) * 100), color: SENT_COLORS.neutral },
       { name: 'Negative', value: Math.round((counts.negative / total) * 100), color: SENT_COLORS.negative }
     ];
-  }, [keywordData]);
+  }, [keywordData, selectedFilter]);
 
   // Get sentiment percentage
   const getSentimentPercentage = (sentiment: 'positive' | 'neutral' | 'negative') => {
