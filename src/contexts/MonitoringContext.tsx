@@ -14,6 +14,7 @@ export interface RedditActivity {
   timestamp: string;
   created_utc: number;
   url: string;
+  author?: string;
 }
 
 export interface ProfileData {
@@ -85,6 +86,7 @@ const buildActivities = (posts: any[], comments: any[]): RedditActivity[] => {
       timestamp: formatActivityTime(post.created_utc),
       created_utc: post.created_utc || 0,
       url: post.permalink ? `https://reddit.com${post.permalink}` : (post.url || '#'),
+      author: post.author,
     });
   });
   (comments || []).forEach((comment: any) => {
@@ -105,6 +107,7 @@ const buildActivities = (posts: any[], comments: any[]): RedditActivity[] => {
       timestamp: formatActivityTime(comment.created_utc),
       created_utc: comment.created_utc || 0,
       url: commentUrl,
+      author: comment.author,
     });
   });
   acts.sort((a, b) => b.created_utc - a.created_utc);

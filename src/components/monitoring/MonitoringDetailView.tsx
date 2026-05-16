@@ -565,17 +565,30 @@ export const MonitoringDetailView = ({
                               className="group cursor-pointer border-l-4 border-l-blue-500 bg-muted/30 hover:bg-muted/60 transition-all rounded-r-md p-2"
                             >
                               <p className="text-sm font-medium line-clamp-2 leading-snug">{activity.title}</p>
-                              <div className="flex items-center justify-between mt-1.5">
-                                <a 
-                                  href={`https://reddit.com/r/${activity.subreddit}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {activity.subreddit}
-                                </a>
-                                <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+                              <div className="flex flex-col gap-1 mt-1.5">
+                                <div className="flex items-center justify-between">
+                                  <a 
+                                    href={`https://reddit.com/r/${activity.subreddit.replace(/^r\//, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {activity.subreddit}
+                                  </a>
+                                  <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+                                </div>
+                                {activity.author && (
+                                  <a 
+                                    href={`https://reddit.com/u/${activity.author}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-muted-foreground hover:text-blue-600 hover:underline transition-colors w-fit"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    by u/{activity.author}
+                                  </a>
+                                )}
                               </div>
                             </div>
                           )) : (
@@ -625,17 +638,30 @@ export const MonitoringDetailView = ({
                               className="group cursor-pointer border-l-4 border-l-green-500 bg-muted/30 hover:bg-muted/60 transition-all rounded-r-md p-2"
                             >
                               <p className="text-sm font-medium line-clamp-2 leading-snug">{activity.title}</p>
-                              <div className="flex items-center justify-between mt-1.5">
-                                <a 
-                                  href={`https://reddit.com/r/${activity.subreddit}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  {activity.subreddit}
-                                </a>
-                                <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+                              <div className="flex flex-col gap-1 mt-1.5">
+                                <div className="flex items-center justify-between">
+                                  <a 
+                                    href={`https://reddit.com/r/${activity.subreddit.replace(/^r\//, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {activity.subreddit}
+                                  </a>
+                                  <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+                                </div>
+                                {activity.author && (
+                                  <a 
+                                    href={`https://reddit.com/u/${activity.author}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-muted-foreground hover:text-blue-600 hover:underline transition-colors w-fit"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    by u/{activity.author}
+                                  </a>
+                                )}
                               </div>
                             </div>
                           )) : profileData?.isPrivateProfile ? (
@@ -690,17 +716,30 @@ export const MonitoringDetailView = ({
                             className="group cursor-pointer border-l-4 border-l-blue-500 bg-muted/30 hover:bg-muted/60 transition-all rounded-r-md p-2"
                           >
                             <p className="text-sm font-medium line-clamp-2 leading-snug">{activity.title}</p>
-                            <div className="flex items-center justify-between mt-1.5">
-                              <a 
-                                href={`https://reddit.com/r/${activity.subreddit}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {activity.subreddit}
-                              </a>
-                              <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+                            <div className="flex flex-col gap-1 mt-1.5">
+                              <div className="flex items-center justify-between">
+                                <a 
+                                  href={`https://reddit.com/r/${activity.subreddit.replace(/^r\//, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline transition-colors"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {activity.subreddit}
+                                </a>
+                                <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+                              </div>
+                              {activity.author && (
+                                <a 
+                                  href={`https://reddit.com/u/${activity.author}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[10px] text-muted-foreground hover:text-blue-600 hover:underline transition-colors w-fit"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  by u/{activity.author}
+                                </a>
+                              )}
                             </div>
                           </div>
                         )) : (

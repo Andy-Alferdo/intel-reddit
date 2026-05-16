@@ -451,7 +451,15 @@ const CommunityAnalysis = () => {
                     >
                       <h4 className="font-medium text-sm leading-tight line-clamp-2">{post.title}</h4>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>by u/{post.author}</span>
+                        <a 
+                          href={`https://reddit.com/u/${post.author}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-primary hover:underline transition-colors"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          by u/{post.author}
+                        </a>
                         <span>{formatTimestamp(post.created_utc)}</span>
                       </div>
                       {/* Reddit-style Voting Bar */}
@@ -538,7 +546,15 @@ const CommunityAnalysis = () => {
                               </svg>
                             </button>
                           </div>
-                          <span className="text-xs text-muted-foreground">u/{post.author}</span>
+                          <a 
+                            href={`https://reddit.com/u/${post.author}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            u/{post.author}
+                          </a>
                         </div>
                       </div>
                     </a>
@@ -560,7 +576,14 @@ const CommunityAnalysis = () => {
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-bold text-muted-foreground min-w-[24px]">#{i + 1}</span>
                           <div>
-                            <p className="font-medium text-sm">u/{c.author}</p>
+                            <a 
+                              href={`https://reddit.com/u/${c.author}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-sm hover:text-primary hover:underline transition-colors"
+                            >
+                              u/{c.author}
+                            </a>
                             <p className="text-xs text-muted-foreground">{c.posts} posts</p>
                           </div>
                         </div>

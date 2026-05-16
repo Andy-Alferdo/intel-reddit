@@ -320,9 +320,25 @@ const PostCard = ({
           {/* Header Row */}
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-              <span className="font-medium text-blue-400 truncate">r/{post.subreddit}</span>
+              <a 
+                href={`https://reddit.com/r/${post.subreddit}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-blue-400 hover:underline transition-colors truncate"
+                onClick={(e) => e.stopPropagation()}
+              >
+                r/{post.subreddit}
+              </a>
               <span className="text-muted-foreground">•</span>
-              <span className="text-blue-300">u/{post.author}</span>
+              <a 
+                href={`https://reddit.com/u/${post.author}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-300 hover:underline transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                u/{post.author}
+              </a>
             </div>
             <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${sentimentTone(post._sentiment)}`}>
               {post._sentiment || 'neutral'}
@@ -966,25 +982,32 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       </div>
 
       {/* Search Bar */}
-      <Card className="border-primary/20">
+      <Card className="border-primary/20 overflow-hidden relative">
+        {/* Decorative design element */}
+        <div className="absolute top-0 right-0 w-32 h-full opacity-[0.03] pointer-events-none">
+          <svg viewBox="0 0 100 100" className="w-full h-full fill-primary">
+            <path d="M50 0 L100 50 L50 100 L0 50 Z" />
+          </svg>
+        </div>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Search className="h-4 w-4 text-primary" />
+          <CardTitle className="flex items-center gap-2">
+            <Hash className="h-5 w-5 text-primary" />
             Keyword Intelligence Search
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Enter a keyword or phrase to analyze across Reddit (e.g., "cybersecurity", "Asim Munir")
           </p>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="flex items-center gap-2">
+        <CardContent>
+          <div className="flex gap-2">
             <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Enter keyword to analyze..."
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleKeywordAnalysis()}
-                className="pr-10 h-10 border-border bg-background text-foreground"
+                className="pl-9 h-10 border-border bg-background text-foreground"
               />
               {keyword && (
                 <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setKeyword('')}>
