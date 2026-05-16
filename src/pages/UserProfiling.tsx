@@ -310,7 +310,7 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   };
 
   return (
-    <div className="h-[400px] w-full">
+    <div className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <Treemap
           data={[{ children: treemapData }]}
@@ -2139,7 +2139,7 @@ const UserProfiling = () => {
                     <Hash className="h-4 w-4 text-blue-600" /> Top Communities
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4">
+                <CardContent className="p-4" style={{ height: '400px' }}>
                   <CommunitiesTreemap data={profileData.activeSubreddits || []} />
                 </CardContent>
               </Card>
@@ -2151,7 +2151,7 @@ const UserProfiling = () => {
                     <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4">
+                <CardContent className="p-4" style={{ height: '400px', overflow: 'auto' }}>
                   {(profileData.wordCloud || []).length > 0 ? (
                     <div className="space-y-4">
                       {profileData.wordCloud.slice(0, 10).map((w: any, i: number) => {
