@@ -352,12 +352,11 @@ const UserProfiling = () => {
   const [visibleComments, setVisibleComments] = useState(INITIAL_VISIBLE);
   const [isAnalyzingMorePosts, setIsAnalyzingMorePosts] = useState(false);
   const [isAnalyzingMoreComments, setIsAnalyzingMoreComments] = useState(false);
-  const [postsSort, setPostsSort] = useState<'recent' | 'top'>('recent');
-  const [commentsSort, setCommentsSort] = useState<'recent' | 'top'>('recent');
+  const [postsSort, setPostsSort] = useState<'all' | 'recent' | 'top'>('all');
+  const [commentsSort, setCommentsSort] = useState<'all' | 'recent' | 'top'>('all');
   const [sentimentFilter, setSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
   const [postSentimentFilter, setPostSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
   const [commentSentimentFilter, setCommentSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
-  const [feedView, setFeedView] = useState<'all' | 'recent20' | 'top20'>('all');
   const { toast } = useToast();
   const { addUserProfile, saveUserProfileToDb, saveRedditContentToDb, currentCase } = useInvestigation();
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
@@ -1254,21 +1253,19 @@ const UserProfiling = () => {
       arr = arr.filter(item => item.sentiment === postSentimentFilter);
     }
     
-    // Sort based on selected sort type OR feedView
-    if (feedView === 'top20' || postsSort === 'top') {
+    // Sort and limit based on postsSort
+    if (postsSort === 'top') {
       arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-    } else {
-      // Recent = newest by created_utc
-      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
-    }
-
-    // Apply feedView limits
-    if (feedView === 'recent20' || feedView === 'top20') {
       return arr.slice(0, 20);
+    } else if (postsSort === 'recent') {
+      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
+      return arr.slice(0, 20);
+    } else {
+      // 'all' - sort by recent but don't limit to 20
+      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
+      return arr;
     }
-    
-    return arr;
-  }, [profileData?.postSentiments, postsSort, postSentimentFilter, feedView]);
+  }, [profileData?.postSentiments, postsSort, postSentimentFilter]);
 
   const sortedComments = useMemo(() => {
     let arr = [...(profileData?.commentSentiments || [])];
@@ -1277,22 +1274,19 @@ const UserProfiling = () => {
       arr = arr.filter(item => item.sentiment === commentSentimentFilter);
     }
     
-    // Sort based on selected sort type OR feedView
-    if (feedView === 'top20' || commentsSort === 'top') {
-      // Top = highest score/upvotes
+    // Sort and limit based on commentsSort
+    if (commentsSort === 'top') {
       arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-    } else {
-      // Recent = newest by created_utc
-      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
-    }
-
-    // Apply feedView limits
-    if (feedView === 'recent20' || feedView === 'top20') {
       return arr.slice(0, 20);
+    } else if (commentsSort === 'recent') {
+      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
+      return arr.slice(0, 20);
+    } else {
+      // 'all' - sort by recent but don't limit to 20
+      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
+      return arr;
     }
-    
-    return arr;
-  }, [profileData?.commentSentiments, commentsSort, commentSentimentFilter, feedView]);
+  }, [profileData?.commentSentiments, commentsSort, commentSentimentFilter]);
 
   const renderSentimentRow = (item: any, itemKey: string, isPost: boolean) => {
     const deepState = deepAnalysisStates.get(itemKey);
@@ -1844,35 +1838,6 @@ const UserProfiling = () => {
                         </CardTitle>
                         
                         <div className="flex items-center gap-2 ml-auto">
-                          <div className="flex items-center gap-1.5 bg-muted p-1 rounded-lg border border-border">
-                            <Button 
-                              variant={feedView === 'all' ? 'default' : 'ghost'} 
-                              size="sm" 
-                              className="h-7 text-[10px] px-2.5" 
-                              onClick={() => setFeedView('all')}
-                            >
-                              All
-                            </Button>
-                            <Button 
-                              variant={feedView === 'recent20' ? 'default' : 'ghost'} 
-                              size="sm" 
-                              className="h-7 text-[10px] px-2.5" 
-                              onClick={() => setFeedView('recent20')}
-                            >
-                              Recent 20
-                            </Button>
-                            <Button 
-                              variant={feedView === 'top20' ? 'default' : 'ghost'} 
-                              size="sm" 
-                              className="h-7 text-[10px] px-2.5" 
-                              onClick={() => setFeedView('top20')}
-                            >
-                              Top 20
-                            </Button>
-                          </div>
-                          
-                          <Separator orientation="vertical" className="h-6 mx-1" />
-
                           <div className="flex items-center gap-1.5">
                             <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Posts</span>
                             <Select value={postsSort} onValueChange={(v) => setPostsSort(v as any)}>
@@ -1880,8 +1845,9 @@ const UserProfiling = () => {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="recent" className="text-xs">Recent</SelectItem>
-                                <SelectItem value="top" className="text-xs">Top</SelectItem>
+                                <SelectItem value="all" className="text-xs">All</SelectItem>
+                                <SelectItem value="recent" className="text-xs">Recent 20</SelectItem>
+                                <SelectItem value="top" className="text-xs">Top 20</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1892,8 +1858,9 @@ const UserProfiling = () => {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="recent" className="text-xs">Recent</SelectItem>
-                                <SelectItem value="top" className="text-xs">Top</SelectItem>
+                                <SelectItem value="all" className="text-xs">All</SelectItem>
+                                <SelectItem value="recent" className="text-xs">Recent 20</SelectItem>
+                                <SelectItem value="top" className="text-xs">Top 20</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1906,7 +1873,7 @@ const UserProfiling = () => {
                       <div>
                         <div className="flex items-center justify-between mb-2.5 px-1">
                           <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                            {postsSort === 'top' ? 'Top Posts' : 'Recent Posts'}
+                            {postsSort === 'top' ? 'Top 20 Posts' : postsSort === 'recent' ? 'Recent 20 Posts' : 'All Posts'}
                           </h4>
                           <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-500 px-1.5 py-0">
                             {sortedPosts.length}
@@ -1934,7 +1901,7 @@ const UserProfiling = () => {
                       <div>
                         <div className="flex items-center justify-between mb-2.5 px-1">
                           <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                            {commentsSort === 'top' ? 'Top Comments' : 'Recent Comments'}
+                            {commentsSort === 'top' ? 'Top 20 Comments' : commentsSort === 'recent' ? 'Recent 20 Comments' : 'All Comments'}
                           </h4>
                           <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-500 px-1.5 py-0">
                             {sortedComments.length}
@@ -2227,7 +2194,7 @@ const UserProfiling = () => {
                     <TrendingUp className="h-4 w-4 text-blue-600" /> Posting Activity Timeline
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-3" style={{ height: '280px' }}>
+                <CardContent className="p-3" style={{ height: '400px' }}>
                   {(profileData.monthlyActivity || []).length > 0 ? (
                     <>
                       <ResponsiveContainer width="100%" height="100%">

@@ -608,15 +608,14 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
     return posts.slice(0, 20);
   }, [keywordData, selectedFilter, activeSentiment]);
 
-  // Calculate sentiment distribution from all posts
+  // Calculate sentiment distribution from filtered posts
   const sentimentData = useMemo(() => {
     if (!keywordData) return [];
 
-    const allPosts = [...(keywordData.recent20Posts || []), ...(keywordData.top20Posts || [])];
-    const uniquePosts = Array.from(new Map(allPosts.map(p => [p.id, p])).values());
-
+    const targetPosts = selectedFilter === 'top' ? (keywordData.top20Posts || []) : (keywordData.recent20Posts || []);
+    
     const counts = { positive: 0, neutral: 0, negative: 0 };
-    uniquePosts.forEach((post: Post) => {
+    targetPosts.forEach((post: Post) => {
       const sentiment = post._sentiment || 'neutral';
       if (sentiment in counts) counts[sentiment as keyof typeof counts]++;
     });
