@@ -16,6 +16,8 @@ import {
   Clock, AlertCircle, Trash2, TrendingUp, Hash, BarChart3,
   Brain, Target, Globe, Eye
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip,
   LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar, Treemap, Legend
