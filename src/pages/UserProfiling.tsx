@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { toZonedTime, format } from 'date-fns-tz';
 import { useInvestigation } from '@/contexts/InvestigationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const INITIAL_VISIBLE = 10;
 
@@ -343,6 +344,7 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
 };
 
 const UserProfiling = () => {
+  const { theme } = useTheme();
   const location = useLocation();
   const [username, setUsername] = useState('');
   const [profileData, setProfileData] = useState<any>(null);
