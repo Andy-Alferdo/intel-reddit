@@ -615,41 +615,42 @@ const CommunityAnalysis = () => {
         )}
       </div>
 
-      {/* Post Preview Dialog - like Monitoring */}
+      {/* Post Preview Dialog - matching Keyword Analysis design */}
       <Dialog open={!!previewPost} onOpenChange={(open) => !open && setPreviewPost(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-xl border-primary/20 shadow-xl">
-          <DialogHeader className="border-b border-primary/10 pb-3">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-xl border-blue-100 shadow-xl">
+          <DialogHeader className="border-b border-blue-50 pb-3">
             <DialogTitle className="text-base leading-snug flex items-center gap-2">
-              <span className="p-1 bg-primary/10 rounded text-primary">📄</span>
+              <span className="p-1 bg-blue-50 rounded text-blue-600">📄</span>
               Post Preview
             </DialogTitle>
             <DialogDescription className="flex items-center gap-2 pt-1">
-              <Badge variant="outline" className="text-[10px] bg-accent/30">{previewPost?.subreddit}</Badge>
+              <Badge variant="outline" className="text-[10px] bg-slate-50 border-blue-100 text-blue-600">{previewPost?.subreddit}</Badge>
               <span className="text-[10px] text-muted-foreground">
                 {previewPost?.created_utc ? format(new Date(previewPost.created_utc * 1000), 'MMM d, yyyy | hh:mm a') : ''}
               </span>
             </DialogDescription>
           </DialogHeader>
+          <p className="sr-only">Previewing post {previewPost?.title}</p>
           <ScrollArea className="flex-1 max-h-[50vh] mt-4">
             <div className="space-y-4 pr-4">
               <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewPost?.title}</h3>
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground font-medium">by</span>
-                <span className="text-primary font-semibold">u/{previewPost?.author}</span>
-                <Badge variant="secondary" className="text-[10px] ml-auto">▲ {previewPost?.score}</Badge>
+                <span className="text-blue-600 font-semibold">u/{previewPost?.author}</span>
+                <Badge variant="secondary" className="text-[10px] ml-auto bg-slate-100">▲ {previewPost?.score}</Badge>
               </div>
               {previewPost?.selftext ? (
-                <div className="text-sm text-muted-foreground leading-relaxed bg-accent/20 p-3 rounded-lg border border-border/50 whitespace-pre-wrap">
+                <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
                   {previewPost.selftext}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground italic bg-accent/10 p-3 rounded-lg border border-dashed border-border/50">No additional content available.</p>
+                <p className="text-xs text-muted-foreground italic bg-slate-50 p-3 rounded-lg border border-dashed border-slate-200">No additional content available.</p>
               )}
             </div>
           </ScrollArea>
-          <div className="pt-4 mt-2 border-t border-border/50">
+          <div className="pt-4 mt-2 border-t border-slate-100">
             <Button 
-              className="w-full gap-2 rounded-lg"
+              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-all shadow-blue-200"
               onClick={() => window.open(`https://reddit.com${previewPost?.permalink}`, '_blank')}
             >
               <ExternalLink className="h-4 w-4" />

@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ export const UserCommunityNetworkGraph = ({
   onAnalyzeCommunity,
   height = 500,
 }: UserCommunityNetworkGraphProps) => {
+  const { theme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height });
@@ -396,21 +398,37 @@ export const UserCommunityNetworkGraph = ({
       ctx.clearRect(0, 0, width, height);
 
       // Background
-      const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width / 2);
-      bgGradient.addColorStop(0, 'rgba(15, 23, 42, 1)');
-      bgGradient.addColorStop(1, 'rgba(2, 6, 23, 1)');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
+      if (theme === 'dark') {
+        const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, width / 2);
+        bgGradient.addColorStop(0, 'rgba(15, 23, 42, 1)');
+        bgGradient.addColorStop(1, 'rgba(2, 6, 23, 1)');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, width, height);
 
-      // Ambient particles (not affected by transform)
-      for (let i = 0; i < 50; i++) {
-        const x = (Math.sin(Date.now() * 0.001 + i * 0.5) + 1) * width / 2;
-        const y = (Math.cos(Date.now() * 0.0008 + i * 0.7) + 1) * height / 2;
-        const s = 1 + Math.sin(Date.now() * 0.002 + i) * 0.5;
-        ctx.beginPath();
-        ctx.arc(x, y, s, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(59, 130, 246, ${0.1 + Math.sin(Date.now() * 0.001 + i) * 0.05})`;
-        ctx.fill();
+        // Ambient particles (not affected by transform) - only in dark mode
+        for (let i = 0; i < 50; i++) {
+          const x = (Math.sin(Date.now() * 0.001 + i * 0.5) + 1) * width / 2;
+          const y = (Math.cos(Date.now() * 0.0008 + i * 0.7) + 1) * height / 2;
+          const s = 1 + Math.sin(Date.now() * 0.002 + i) * 0.5;
+          ctx.beginPath();
+          ctx.arc(x, y, s, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(59, 130, 246, ${0.1 + Math.sin(Date.now() * 0.001 + i) * 0.05})`;
+          ctx.fill();
+        }
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Subtle grid for light mode
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1;
+        const gridSize = 40;
+        for (let x = 0; x < width; x += gridSize) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+        }
+        for (let y = 0; y < height; y += gridSize) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+        }
       }
 
       // Apply zoom/pan transform
@@ -445,7 +463,7 @@ export const UserCommunityNetworkGraph = ({
         const py = link.source.y + (link.target.y - link.source.y) * pp;
         ctx.beginPath();
         ctx.arc(px, py, 2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.fillStyle = theme === 'dark' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.25)';
         ctx.fill();
       });
 
@@ -503,12 +521,12 @@ export const UserCommunityNetworkGraph = ({
         const labelHeight = 20;
         const labelY = node.y + size + 8;
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillStyle = theme === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)';
         ctx.beginPath();
         ctx.roundRect(node.x - labelWidth / 2, labelY - 2, labelWidth, labelHeight, 4);
         ctx.fill();
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
         ctx.fillText(node.label, node.x, labelY + 2);
       });
 
@@ -543,7 +561,7 @@ export const UserCommunityNetworkGraph = ({
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [nodes, links, dimensions, primaryUserId]);
+  }, [nodes, links, dimensions, primaryUserId, theme]);
 
   return (
     <Card className="border-primary/20 bg-card/50 backdrop-blur-sm shadow-lg overflow-hidden">

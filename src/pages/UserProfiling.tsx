@@ -362,6 +362,8 @@ const UserProfiling = () => {
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
   const [detectedLocations, setDetectedLocations] = useState<string[]>([]);
 
+  const [previewItem, setPreviewItem] = useState<any | null>(null);
+
   // Per-item deep analysis state
   const [deepAnalysisStates, setDeepAnalysisStates] = useState<Map<string, { isAnalyzing: boolean; result: any; showDeep: boolean; analysisType?: 'lime' | 'shap' }>>(new Map());
   const [xaiPanelOpen, setXaiPanelOpen] = useState<Set<string>>(new Set());
@@ -1245,48 +1247,74 @@ const UserProfiling = () => {
     return { risk, influence, negPct, posPct };
   }, [profileData]);
 
-  // Sorted feeds with sentiment filtering
-  const sortedPosts = useMemo(() => {
+  // Base sorted/limited items for graphs (NOT filtered by sentiment)
+  const baseSortedPosts = useMemo(() => {
     let arr = [...(profileData?.postSentiments || [])];
-    // Apply sentiment filter if active
-    if (postSentimentFilter) {
-      arr = arr.filter(item => item.sentiment === postSentimentFilter);
-    }
-    
-    // Sort and limit based on postsSort
     if (postsSort === 'top') {
       arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
       return arr.slice(0, 20);
     } else if (postsSort === 'recent') {
       arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
       return arr.slice(0, 20);
-    } else {
-      // 'all' - sort by recent but don't limit to 20
-      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
-      return arr;
     }
-  }, [profileData?.postSentiments, postsSort, postSentimentFilter]);
+    return arr;
+  }, [profileData?.postSentiments, postsSort]);
 
-  const sortedComments = useMemo(() => {
+  const baseSortedComments = useMemo(() => {
     let arr = [...(profileData?.commentSentiments || [])];
-    // Apply sentiment filter if active
-    if (commentSentimentFilter) {
-      arr = arr.filter(item => item.sentiment === commentSentimentFilter);
-    }
-    
-    // Sort and limit based on commentsSort
     if (commentsSort === 'top') {
       arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
       return arr.slice(0, 20);
     } else if (commentsSort === 'recent') {
       arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
       return arr.slice(0, 20);
-    } else {
-      // 'all' - sort by recent but don't limit to 20
-      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
-      return arr;
     }
-  }, [profileData?.commentSentiments, commentsSort, commentSentimentFilter]);
+    return arr;
+  }, [profileData?.commentSentiments, commentsSort]);
+
+  // Dynamic sentiment breakdown for graphs
+  const dynamicPostSentimentBreakdown = useMemo(() => {
+    if (!baseSortedPosts.length) return { positive: 0, neutral: 0, negative: 0 };
+    const pos = baseSortedPosts.filter(s => s.sentiment === 'positive').length;
+    const neg = baseSortedPosts.filter(s => s.sentiment === 'negative').length;
+    const neu = baseSortedPosts.filter(s => s.sentiment === 'neutral').length;
+    const total = baseSortedPosts.length;
+    return {
+      positive: Math.round((pos/total)*100),
+      neutral: Math.round((neu/total)*100),
+      negative: Math.round((neg/total)*100)
+    };
+  }, [baseSortedPosts]);
+
+  const dynamicCommentSentimentBreakdown = useMemo(() => {
+    if (!baseSortedComments.length) return { positive: 0, neutral: 0, negative: 0 };
+    const pos = baseSortedComments.filter(s => s.sentiment === 'positive').length;
+    const neg = baseSortedComments.filter(s => s.sentiment === 'negative').length;
+    const neu = baseSortedComments.filter(s => s.sentiment === 'neutral').length;
+    const total = baseSortedComments.length;
+    return {
+      positive: Math.round((pos/total)*100),
+      neutral: Math.round((neu/total)*100),
+      negative: Math.round((neg/total)*100)
+    };
+  }, [baseSortedComments]);
+
+  // Final sorted/filtered feeds for display
+  const sortedPosts = useMemo(() => {
+    let arr = [...baseSortedPosts];
+    if (postSentimentFilter) {
+      arr = arr.filter(item => item.sentiment === postSentimentFilter);
+    }
+    return arr;
+  }, [baseSortedPosts, postSentimentFilter]);
+
+  const sortedComments = useMemo(() => {
+    let arr = [...baseSortedComments];
+    if (commentSentimentFilter) {
+      arr = arr.filter(item => item.sentiment === commentSentimentFilter);
+    }
+    return arr;
+  }, [baseSortedComments, commentSentimentFilter]);
 
   const renderSentimentRow = (item: any, itemKey: string, isPost: boolean) => {
     const deepState = deepAnalysisStates.get(itemKey);
@@ -1452,7 +1480,7 @@ const UserProfiling = () => {
       <div
         key={itemKey}
         className="group relative rounded-lg border border-border bg-card p-3 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
-        onClick={() => item.permalink && window.open(`https://www.reddit.com${item.permalink}`, '_blank')}
+        onClick={() => setPreviewItem({ ...item, isPost })}
       >
         <div className="flex items-start gap-2.5">
           <div className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center mt-0.5">
@@ -1999,11 +2027,11 @@ const UserProfiling = () => {
                       {/* Posts Chart */}
                       <div className="text-center">
                         <div className="text-[10px] font-semibold text-slate-600 uppercase mb-1">Posts</div>
-                        {sentimentPieData(profileData.postSentimentBreakdown).length > 0 ? (
+                        {sentimentPieData(dynamicPostSentimentBreakdown).length > 0 ? (
                           <ResponsiveContainer width="100%" height={110}>
                             <PieChart>
                               <Pie
-                                data={sentimentPieData(profileData.postSentimentBreakdown)}
+                                data={sentimentPieData(dynamicPostSentimentBreakdown)}
                                 dataKey="value"
                                 cx="50%"
                                 cy="50%"
@@ -2016,7 +2044,7 @@ const UserProfiling = () => {
                                 }}
                                 className="cursor-pointer"
                               >
-                                {sentimentPieData(profileData.postSentimentBreakdown).map((d, i) => (
+                                {sentimentPieData(dynamicPostSentimentBreakdown).map((d, i) => (
                                   <Cell
                                     key={i}
                                     fill={d.color}
@@ -2048,11 +2076,11 @@ const UserProfiling = () => {
                       {/* Comments Chart */}
                       <div className="text-center">
                         <div className="text-[10px] font-semibold text-slate-600 uppercase mb-1">Comments</div>
-                        {sentimentPieData(profileData.commentSentimentBreakdown).length > 0 ? (
+                        {sentimentPieData(dynamicCommentSentimentBreakdown).length > 0 ? (
                           <ResponsiveContainer width="100%" height={110}>
                             <PieChart>
                               <Pie
-                                data={sentimentPieData(profileData.commentSentimentBreakdown)}
+                                data={sentimentPieData(dynamicCommentSentimentBreakdown)}
                                 dataKey="value"
                                 cx="50%"
                                 cy="50%"
@@ -2065,7 +2093,7 @@ const UserProfiling = () => {
                                 }}
                                 className="cursor-pointer"
                               >
-                                {sentimentPieData(profileData.commentSentimentBreakdown).map((d, i) => (
+                                {sentimentPieData(dynamicCommentSentimentBreakdown).map((d, i) => (
                                   <Cell
                                     key={i}
                                     fill={d.color}
@@ -2123,8 +2151,8 @@ const UserProfiling = () => {
                 </CardHeader>
                 <CardContent className="p-4">
                   {(profileData.wordCloud || []).length > 0 ? (
-                    <div className="space-y-2" style={{ gap: '6px' }}>
-                      {profileData.wordCloud.slice(0, 6).map((w: any, i: number) => {
+                    <div className="space-y-4">
+                      {profileData.wordCloud.slice(0, 10).map((w: any, i: number) => {
                         const max = Math.max(...profileData.wordCloud.map((x: any) => x.frequency || 0));
                         const pct = max > 0 ? (w.frequency / max) * 100 : 0;
                         return (
@@ -2132,19 +2160,21 @@ const UserProfiling = () => {
                             key={i}
                             className="transition-all duration-150 ease-in-out hover:bg-white/5 hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
                             style={{
-                              padding: '6px 10px',
-                              borderRadius: '8px'
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              marginBottom: '4px'
                             }}
                           >
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center justify-between mb-2">
                               <span
                                 className="truncate text-foreground"
                                 style={{
-                                  fontWeight: '500',
-                                  fontSize: '14px'
+                                  fontWeight: '600',
+                                  fontSize: '15px',
+                                  letterSpacing: '0.025em'
                                 }}
                               >
-                                {w.word}
+                                {w.word.split('').join(' ')}
                               </span>
                               <span
                                 className="font-mono"
@@ -2333,6 +2363,65 @@ const UserProfiling = () => {
           </div>
         )}
       </div>
+
+      {/* Item Preview Dialog - matching Keyword Analysis design */}
+      <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-xl border-blue-100 shadow-xl">
+          <DialogHeader className="border-b border-blue-50 pb-3">
+            <DialogTitle className="text-base leading-snug flex items-center gap-2">
+              <span className="p-1 bg-blue-50 rounded text-blue-600">
+                {previewItem?.isPost ? '📄' : '💬'}
+              </span>
+              {previewItem?.isPost ? 'Post Preview' : 'Comment Preview'}
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 pt-1">
+              <Badge variant="outline" className="text-[10px] bg-slate-50 border-blue-100 text-blue-600">
+                r/{previewItem?.subreddit}
+              </Badge>
+              <span className="text-[10px] text-muted-foreground">
+                {previewItem?.created_utc ? formatTimestamp(previewItem.created_utc) : ''}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <p className="sr-only">Previewing {previewItem?.isPost ? 'post' : 'comment'}</p>
+          <ScrollArea className="flex-1 max-h-[50vh] mt-4">
+            <div className="space-y-4 pr-4">
+              {previewItem?.isPost && (
+                <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewItem?.title}</h3>
+              )}
+              {!previewItem?.isPost && previewItem?.link_title && (
+                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                  On post: {previewItem.link_title}
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground font-medium">by</span>
+                <span className="text-blue-600 font-semibold">u/{profileData.username}</span>
+                <Badge variant="secondary" className="text-[10px] ml-auto bg-slate-100">
+                  ▲ {previewItem?.score}
+                </Badge>
+              </div>
+              <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
+                {previewItem?.text || previewItem?.body || (previewItem?.isPost ? '(no text)' : '(comment unavailable)')}
+              </div>
+              {previewItem?.isPost && previewItem?.body && previewItem.body !== previewItem.text && (
+                <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
+                  {previewItem.body}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <div className="pt-4 mt-2 border-t border-slate-100">
+            <Button 
+              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-all shadow-blue-200"
+              onClick={() => previewItem?.permalink && window.open(`https://reddit.com${previewItem.permalink}`, '_blank')}
+            >
+              <ExternalLink className="h-4 w-4" />
+              View on Reddit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 };
