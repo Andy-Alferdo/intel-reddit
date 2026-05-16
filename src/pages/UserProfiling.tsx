@@ -281,11 +281,11 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
               y={y + height / 2 - (showCount ? 8 : 0)}
               fill="white"
               fontSize={nameFontSize}
-              fontWeight={400}
+              fontWeight={300}
               textAnchor="middle"
               dominantBaseline="middle"
               className="pointer-events-none"
-              style={{ fontWeight: 400 }}
+              style={{ fontWeight: 300, fontFamily: 'inherit' }}
             >
               {name}
             </text>
@@ -295,11 +295,11 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
                   y={y + height / 2 + 8}
                   fill="rgba(255,255,255,0.8)"
                   fontSize={countFontSize}
-                  fontWeight={400}
+                  fontWeight={300}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   className="pointer-events-none"
-                  style={{ fontWeight: 400 }}
+                  style={{ fontWeight: 300, fontFamily: 'inherit' }}
                 >
                   {size} posts
                 </text>
@@ -2193,9 +2193,9 @@ const UserProfiling = () => {
                     <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4" style={{ height: '320px', overflowY: 'auto' }}>
+                <CardContent className="p-4" style={{ height: 'auto', overflowY: 'visible' }}>
                   {(profileData.wordCloud || []).length > 0 ? (
-                    <div className="space-y-1.5">
+                    <div className="space-y-0.5">
                       {profileData.wordCloud.slice(0, 10).map((w: any, i: number) => {
                         const max = Math.max(...profileData.wordCloud.map((x: any) => x.frequency || 0));
                         const pct = max > 0 ? (w.frequency / max) * 100 : 0;
@@ -2204,7 +2204,7 @@ const UserProfiling = () => {
                             key={i}
                             className="transition-all duration-150 ease-in-out hover:bg-white/5 hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
                             style={{
-                              padding: '6px 10px',
+                              padding: '3px 10px',
                               borderRadius: '8px',
                             }}
                           >
@@ -2269,50 +2269,46 @@ const UserProfiling = () => {
                 </CardHeader>
                 <CardContent className="p-3" style={{ height: '320px' }}>
                   {(profileData.monthlyActivity || []).length > 0 ? (
-                    <>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={profileData.monthlyActivity} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                          <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
-                          <YAxis fontSize={10} stroke="#94a3b8" />
-                          <RTooltip
-                            contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0' }}
-                            formatter={(value: any, name: string, props: any) => {
-                              const dataKey = props?.dataKey;
-                              return [value, dataKey === 'posts' ? 'Posts' : 'Comments'];
-                            }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="posts"
-                            name="Posts"
-                            stroke="#f97316"
-                            strokeWidth={2}
-                            dot={{ fill: '#f97316', r: 3 }}
-                            activeDot={{ r: 5 }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="comments"
-                            name="Comments"
-                            stroke="#3b82f6"
-                            strokeWidth={2}
-                            dot={{ fill: '#3b82f6', r: 3 }}
-                            activeDot={{ r: 5 }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                      <div className="flex items-center justify-center gap-4 mt-2 text-[10px]">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
-                          Posts
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                          Comments
-                        </span>
-                      </div>
-                    </>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={profileData.monthlyActivity} margin={{ top: 8, right: 8, left: -18, bottom: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="name" fontSize={10} stroke="#94a3b8" />
+                        <YAxis fontSize={10} stroke="#94a3b8" />
+                        <RTooltip
+                          contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e2e8f0' }}
+                          formatter={(value: any, name: string, props: any) => {
+                            const dataKey = props?.dataKey;
+                            return [value, dataKey === 'posts' ? 'Posts' : 'Comments'];
+                          }}
+                        />
+                        <Legend
+                          verticalAlign="bottom"
+                          height={28}
+                          iconType="circle"
+                          iconSize={9}
+                          wrapperStyle={{ fontSize: '10px', paddingTop: '4px' }}
+                          formatter={(value) => value === 'posts' ? 'Posts' : 'Comments'}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="posts"
+                          name="posts"
+                          stroke="#f97316"
+                          strokeWidth={2}
+                          dot={{ fill: '#f97316', r: 3 }}
+                          activeDot={{ r: 5 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="comments"
+                          name="comments"
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          dot={{ fill: '#3b82f6', r: 3 }}
+                          activeDot={{ r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   ) : (
                     <p className="text-xs text-slate-400 text-center py-12">No timeline data</p>
                   )}
