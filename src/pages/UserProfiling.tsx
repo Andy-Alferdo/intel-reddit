@@ -2409,7 +2409,7 @@ const UserProfiling = () => {
                   ▲ {previewItem?.score}
                 </Badge>
               </div>
-              <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
+              <div className="text-sm text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
                 {previewItem?.isPost && previewItem?.body ? previewItem.body : (previewItem?.text || previewItem?.body || (previewItem?.isPost ? '(no text)' : '(comment unavailable)'))}
               </div>
             </div>

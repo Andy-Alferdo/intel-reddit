@@ -1,6 +1,10 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { Card } from "@/components/ui/card";
+import { ForceGraph2D } from 'react-force-graph';
 import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useCallback, useRef, useEffect, useState } from "react";
+import { debounce } from 'lodash';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface RelatedSub {
   name: string;
@@ -43,6 +47,7 @@ export const RelatedSubredditsGraph = ({
   relatedSubreddits,
   onSubredditClick,
 }: RelatedSubredditsGraphProps) => {
+  const { theme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 600, height: 400 });
@@ -332,22 +337,38 @@ export const RelatedSubredditsGraph = ({
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Background - light slate to match LinkAnalysis design
-      const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, width / 2);
-      bg.addColorStop(0, 'rgba(248, 250, 252, 1)');
-      bg.addColorStop(1, 'rgba(241, 245, 249, 1)');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, width, height);
+      // Background - theme-based like LinkAnalysis
+      if (theme === 'dark') {
+        const bgGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, width / 2);
+        bgGradient.addColorStop(0, 'rgba(15, 23, 42, 1)');
+        bgGradient.addColorStop(1, 'rgba(2, 6, 23, 1)');
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, width, height);
 
-      // Ambient particles
-      for (let i = 0; i < 50; i++) {
-        const x = (Math.sin(Date.now() * 0.001 + i * 0.5) + 1) * width / 2;
-        const y = (Math.cos(Date.now() * 0.0008 + i * 0.7) + 1) * height / 2;
-        const s = 1 + Math.sin(Date.now() * 0.002 + i) * 0.5;
-        ctx.beginPath();
-        ctx.arc(x, y, s, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(59, 130, 246, ${0.15 + Math.sin(Date.now() * 0.001 + i) * 0.08})`;
-        ctx.fill();
+        // Ambient particles - only in dark mode
+        for (let i = 0; i < 50; i++) {
+          const x = (Math.sin(Date.now() * 0.001 + i * 0.5) + 1) * width / 2;
+          const y = (Math.cos(Date.now() * 0.0008 + i * 0.7) + 1) * height / 2;
+          const s = 1 + Math.sin(Date.now() * 0.002 + i) * 0.5;
+          ctx.beginPath();
+          ctx.arc(x, y, s, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(59, 130, 246, ${0.1 + Math.sin(Date.now() * 0.001 + i) * 0.05})`;
+          ctx.fill();
+        }
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        // Subtle grid for light mode
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1;
+        const gridSize = 40;
+        for (let x = 0; x < width; x += gridSize) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+        }
+        for (let y = 0; y < height; y += gridSize) {
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+        }
       }
 
       const t = transformRef.current;

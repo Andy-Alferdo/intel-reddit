@@ -452,6 +452,9 @@ const CommunityAnalysis = () => {
                       onClick={() => setPreviewPost(post)}
                     >
                       <h4 className="font-medium text-sm leading-tight line-clamp-2">{post.title}</h4>
+                      {post.selftext && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">{post.selftext}</p>
+                      )}
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span className="hover:text-primary transition-colors">
                           by u/{post.author}
