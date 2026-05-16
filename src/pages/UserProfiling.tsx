@@ -356,8 +356,8 @@ const UserProfiling = () => {
   const [visibleComments, setVisibleComments] = useState(INITIAL_VISIBLE);
   const [isAnalyzingMorePosts, setIsAnalyzingMorePosts] = useState(false);
   const [isAnalyzingMoreComments, setIsAnalyzingMoreComments] = useState(false);
-  const [postsSort, setPostsSort] = useState<'all' | 'recent' | 'top'>('all');
-  const [commentsSort, setCommentsSort] = useState<'all' | 'recent' | 'top'>('all');
+  const [postsSort, setPostsSort] = useState<'all' | 'recent' | 'top'>('recent');
+  const [commentsSort, setCommentsSort] = useState<'all' | 'recent' | 'top'>('recent');
   const [sentimentFilter, setSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
   const [postSentimentFilter, setPostSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
   const [commentSentimentFilter, setCommentSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
@@ -1907,7 +1907,6 @@ const UserProfiling = () => {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="all" className="text-xs">All</SelectItem>
                                 <SelectItem value="recent" className="text-xs">Recent 20</SelectItem>
                                 <SelectItem value="top" className="text-xs">Top 20</SelectItem>
                               </SelectContent>
@@ -1920,7 +1919,6 @@ const UserProfiling = () => {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="all" className="text-xs">All</SelectItem>
                                 <SelectItem value="recent" className="text-xs">Recent 20</SelectItem>
                                 <SelectItem value="top" className="text-xs">Top 20</SelectItem>
                               </SelectContent>
@@ -2183,7 +2181,7 @@ const UserProfiling = () => {
                     <Hash className="h-4 w-4 text-blue-600" /> Top Communities
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4" style={{ height: '400px' }}>
+                <CardContent className="p-4" style={{ height: '320px' }}>
                   <CommunitiesTreemap data={profileData.activeSubreddits || []} />
                 </CardContent>
               </Card>
@@ -2195,7 +2193,7 @@ const UserProfiling = () => {
                     <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4">
+                <CardContent className="p-4" style={{ height: '320px', overflowY: 'auto' }}>
                   {(profileData.wordCloud || []).length > 0 ? (
                     <div className="space-y-1.5">
                       {profileData.wordCloud.slice(0, 10).map((w: any, i: number) => {
@@ -2269,7 +2267,7 @@ const UserProfiling = () => {
                     <TrendingUp className="h-4 w-4 text-blue-600" /> Posting Activity Timeline
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-3" style={{ height: '400px' }}>
+                <CardContent className="p-3" style={{ height: '320px' }}>
                   {(profileData.monthlyActivity || []).length > 0 ? (
                     <>
                       <ResponsiveContainer width="100%" height="100%">
