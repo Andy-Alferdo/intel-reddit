@@ -2193,9 +2193,9 @@ const UserProfiling = () => {
                     <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4" style={{ height: 'auto', overflowY: 'visible' }}>
+                <CardContent className="p-4" style={{ height: '320px', overflowY: 'auto' }}>
                   {(profileData.wordCloud || []).length > 0 ? (
-                    <div className="space-y-0.5">
+                    <div className="space-y-1.5">
                       {profileData.wordCloud.slice(0, 10).map((w: any, i: number) => {
                         const max = Math.max(...profileData.wordCloud.map((x: any) => x.frequency || 0));
                         const pct = max > 0 ? (w.frequency / max) * 100 : 0;
@@ -2204,7 +2204,7 @@ const UserProfiling = () => {
                             key={i}
                             className="transition-all duration-150 ease-in-out hover:bg-white/5 hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
                             style={{
-                              padding: '3px 10px',
+                              padding: '6px 10px',
                               borderRadius: '8px',
                             }}
                           >
