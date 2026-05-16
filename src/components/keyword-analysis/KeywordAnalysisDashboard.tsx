@@ -734,9 +734,11 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
     try {
       setTargetProgress(35);
       // Search for keyword across Reddit using search API
+      const searchKeyword = keyword.trim().includes(' ') ? `"${keyword.trim()}"` : keyword.trim();
+      
       const { data: redditData, error } = await supabase.functions.invoke('reddit-scraper', {
         body: {
-          keyword: keyword.trim(),
+          keyword: searchKeyword,
           type: 'search'
         }
       });
@@ -749,7 +751,8 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       // try the public Reddit JSON API directly
       if (posts.length === 0) {
         try {
-          const fallbackUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(keyword.trim())}&limit=100&sort=relevance&t=all`;
+          const searchKeyword = keyword.trim().includes(' ') ? `"${keyword.trim()}"` : keyword.trim();
+          const fallbackUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(searchKeyword)}&limit=100&sort=relevance&t=all`;
           const fallbackRes = await fetch(fallbackUrl, { headers: { 'User-Agent': 'IntelReddit/1.0' } });
           if (fallbackRes.ok) {
             const fallbackData = await fallbackRes.json();
@@ -822,7 +825,10 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
 
       // Sort posts by time and score
       const tempSortedByTime = [...posts].sort((a: any, b: any) => (b.created_utc || 0) - (a.created_utc || 0));
-      const tempWithKeyword = posts.filter((p: any) => (p.title || '').toLowerCase().includes(keywordLower));
+      const tempWithKeyword = posts.filter((p: any) => {
+        const textToSearch = `${p.title || ''} ${p.selftext || ''}`.toLowerCase();
+        return textToSearch.includes(keywordLower);
+      });
       const tempSortedByScore = [...tempWithKeyword].sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
 
       // Deduplicate: combine recent20 + top20, removing duplicates
@@ -960,12 +966,21 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
       </div>
 
       {/* Search Bar */}
-      <Card className="border-border shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
+      <Card className="border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Search className="h-4 w-4 text-primary" />
+            Keyword Intelligence Search
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Enter a keyword or phrase to analyze across Reddit (e.g., "cybersecurity", "Asim Munir")
+          </p>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Input
-                placeholder="Enter keyword to analyze (e.g. cybersecurity, AI, bitcoin)"
+                placeholder="Enter keyword to analyze..."
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleKeywordAnalysis()}
@@ -980,9 +995,10 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
             <Button
               onClick={handleKeywordAnalysis}
               disabled={isLoading || !keyword.trim()}
-              className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white"
+              className="h-10 px-6 bg-primary hover:bg-primary/90 text-white"
             >
-              <Search className="h-4 w-4 mr-1.5" /> Analyze
+              <Search className="h-4 w-4 mr-2" /> 
+              {isLoading ? "Analyzing..." : "Analyze"}
             </Button>
           </div>
         </CardContent>
@@ -1278,7 +1294,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
                             href={`https://www.reddit.com/user/${user.username.replace(/^u\//, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors truncate"
+                            className="text-sm font-medium text-foreground hover:text-blue-400 hover:underline transition-colors truncate"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {user.username}

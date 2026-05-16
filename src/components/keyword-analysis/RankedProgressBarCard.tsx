@@ -133,11 +133,11 @@ export const RankedProgressBarCard: React.FC<RankedProgressBarCardProps> = ({
   if (data.length === 0) {
     return (
       <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="pb-2.5 border-b border-slate-100">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <BarChart3 className="h-4 w-4 text-blue-600" /> {title}
-          </CardTitle>
-        </CardHeader>
+      <CardHeader className="pb-2.5 border-b border-border">
+        <CardTitle className="flex items-center gap-2 text-sm text-foreground">
+          <BarChart3 className="h-4 w-4 text-primary" /> {title}
+        </CardTitle>
+      </CardHeader>
         <CardContent className="p-4">
           <div className="h-32 flex items-center justify-center text-slate-400">
             <span className="text-sm">No subreddit data available</span>
@@ -148,10 +148,10 @@ export const RankedProgressBarCard: React.FC<RankedProgressBarCardProps> = ({
   }
 
   return (
-    <Card className="border-slate-200 shadow-sm">
-      <CardHeader className="pb-2.5 border-b border-slate-100">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <BarChart3 className="h-4 w-4 text-blue-600" /> {title}
+    <Card className="border-border bg-card shadow-sm">
+      <CardHeader className="pb-2.5 border-b border-border">
+        <CardTitle className="flex items-center gap-2 text-sm text-foreground">
+          <BarChart3 className="h-4 w-4 text-primary" /> {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 space-y-3">
@@ -163,20 +163,20 @@ export const RankedProgressBarCard: React.FC<RankedProgressBarCardProps> = ({
           return (
             <div
               key={`${item.name}-${item.mentions}`}
-              className="group relative rounded-lg border border-slate-100 bg-white p-3 transition-all duration-200 hover:border-slate-200 hover:shadow-sm"
+              className="group relative rounded-lg border border-border bg-background p-3 transition-all duration-200 hover:border-primary/50 hover:shadow-sm"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <button
                     onClick={() => handleSubredditClick(item.name)}
-                    className="text-sm font-medium text-slate-800 hover:text-blue-600 truncate max-w-[120px] transition-colors duration-200 text-left"
+                    className="text-sm font-medium text-foreground hover:text-primary truncate max-w-[120px] transition-colors duration-200 text-left"
                     title={`Open ${item.name} on Reddit`}
                   >
                     {item.name}
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted-foreground">
                     {item.mentions} {item.mentions === 1 ? 'post' : 'posts'}
                   </span>
                   <DropdownMenu>
@@ -208,7 +208,7 @@ export const RankedProgressBarCard: React.FC<RankedProgressBarCardProps> = ({
                 </div>
               </div>
               
-              <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="relative h-2 bg-muted rounded-full overflow-hidden">
                 <div
                   className={`absolute top-0 left-0 h-full rounded-full transition-all duration-700 ease-out ${getProgressColor(item.rank)}`}
                   style={{

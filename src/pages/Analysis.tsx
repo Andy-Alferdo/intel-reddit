@@ -264,9 +264,10 @@ const Analysis = () => {
     try {
       setTargetProgress(35);
       // Search for keyword across Reddit using search API
+      const searchKeyword = keyword.trim().includes(' ') ? `"${keyword.trim()}"` : keyword.trim();
       const { data: redditData, error } = await supabase.functions.invoke('reddit-scraper', {
         body: { 
-          keyword: keyword.trim(),
+          keyword: searchKeyword,
           type: 'search'
         }
       });
@@ -279,7 +280,8 @@ const Analysis = () => {
       // try the public Reddit JSON API directly
       if (posts.length === 0) {
         try {
-          const fallbackUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(keyword.trim())}&limit=100&sort=relevance&t=all`;
+          const searchKeyword = keyword.trim().includes(' ') ? `"${keyword.trim()}"` : keyword.trim();
+          const fallbackUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(searchKeyword)}&limit=100&sort=relevance&t=all`;
           const fallbackRes = await fetch(fallbackUrl, { headers: { 'User-Agent': 'IntelReddit/1.0' } });
           if (fallbackRes.ok) {
             const fallbackData = await fallbackRes.json();
@@ -359,7 +361,10 @@ const Analysis = () => {
       // First, compute the actual posts we'll display (recent 20 + top 20)
       const tempSortedByTime = [...matchingPosts].sort((a: any, b: any) => (b.created_utc || 0) - (a.created_utc || 0));
       const kwLowerPre = keyword.toLowerCase();
-      const tempWithKeyword = matchingPosts.filter((p: any) => (p.title || '').toLowerCase().includes(kwLowerPre));
+      const tempWithKeyword = matchingPosts.filter((p: any) => {
+        const textToSearch = `${p.title || ''} ${p.selftext || ''}`.toLowerCase();
+        return textToSearch.includes(kwLowerPre);
+      });
       const tempSortedByScore = [...tempWithKeyword].sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
       
       // Deduplicate: combine recent20 + top20, removing duplicates
