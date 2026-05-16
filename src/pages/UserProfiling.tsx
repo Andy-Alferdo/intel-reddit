@@ -1766,7 +1766,7 @@ const UserProfiling = () => {
         {/* Page Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center justify-center gap-2">
-            <User className="h-8 w-8 text-blue-600" />
+            <User className="h-8 w-8 text-foreground" />
             User Profiling
           </h1>
           <p className="text-muted-foreground">
@@ -1778,7 +1778,7 @@ const UserProfiling = () => {
         <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-blue-600" />
+              <User className="h-5 w-5 text-foreground" />
               User Profiling
             </CardTitle>
             <CardDescription>
