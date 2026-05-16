@@ -278,26 +278,28 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
               y={y + height / 2 - (showCount ? 8 : 0)}
               fill="white"
               fontSize={nameFontSize}
-              fontWeight="normal"
+              fontWeight={400}
               textAnchor="middle"
               dominantBaseline="middle"
               className="pointer-events-none"
+              style={{ fontWeight: 400 }}
             >
               {name}
             </text>
             {showCount && (
-              <text
-                x={x + width / 2}
-                y={y + height / 2 + 8}
-                fill="rgba(255,255,255,0.8)"
-                fontSize={countFontSize}
-                fontWeight="normal"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="pointer-events-none"
-              >
-                {size} posts
-              </text>
+                <text
+                  x={x + width / 2}
+                  y={y + height / 2 + 8}
+                  fill="rgba(255,255,255,0.8)"
+                  fontSize={countFontSize}
+                  fontWeight={400}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="pointer-events-none"
+                  style={{ fontWeight: 400 }}
+                >
+                  {size} posts
+                </text>
             )}
           </>
         )}
@@ -306,7 +308,7 @@ const CommunitiesTreemap = ({ data }: { data: any[] }) => {
   };
 
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-[400px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <Treemap
           data={[{ children: treemapData }]}
@@ -355,6 +357,7 @@ const UserProfiling = () => {
   const [sentimentFilter, setSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
   const [postSentimentFilter, setPostSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
   const [commentSentimentFilter, setCommentSentimentFilter] = useState<'positive' | 'negative' | 'neutral' | null>(null);
+  const [feedView, setFeedView] = useState<'all' | 'recent20' | 'top20'>('all');
   const { toast } = useToast();
   const { addUserProfile, saveUserProfileToDb, saveRedditContentToDb, currentCase } = useInvestigation();
   const [savedProfiles, setSavedProfiles] = useState<any[]>([]);
@@ -1250,15 +1253,22 @@ const UserProfiling = () => {
     if (postSentimentFilter) {
       arr = arr.filter(item => item.sentiment === postSentimentFilter);
     }
-    // Sort based on selected sort type
-    if (postsSort === 'top') {
+    
+    // Sort based on selected sort type OR feedView
+    if (feedView === 'top20' || postsSort === 'top') {
       arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
     } else {
       // Recent = newest by created_utc
       arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
     }
+
+    // Apply feedView limits
+    if (feedView === 'recent20' || feedView === 'top20') {
+      return arr.slice(0, 20);
+    }
+    
     return arr;
-  }, [profileData?.postSentiments, postsSort, postSentimentFilter]);
+  }, [profileData?.postSentiments, postsSort, postSentimentFilter, feedView]);
 
   const sortedComments = useMemo(() => {
     let arr = [...(profileData?.commentSentiments || [])];
@@ -1266,16 +1276,23 @@ const UserProfiling = () => {
     if (commentSentimentFilter) {
       arr = arr.filter(item => item.sentiment === commentSentimentFilter);
     }
-    // Sort based on selected sort type
-    if (commentsSort === 'top') {
+    
+    // Sort based on selected sort type OR feedView
+    if (feedView === 'top20' || commentsSort === 'top') {
       // Top = highest score/upvotes
       arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
     } else {
       // Recent = newest by created_utc
       arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
     }
+
+    // Apply feedView limits
+    if (feedView === 'recent20' || feedView === 'top20') {
+      return arr.slice(0, 20);
+    }
+    
     return arr;
-  }, [profileData?.commentSentiments, commentsSort, commentSentimentFilter]);
+  }, [profileData?.commentSentiments, commentsSort, commentSentimentFilter, feedView]);
 
   const renderSentimentRow = (item: any, itemKey: string, isPost: boolean) => {
     const deepState = deepAnalysisStates.get(itemKey);
@@ -1820,38 +1837,68 @@ const UserProfiling = () => {
               <div className="lg:col-span-7">
                 <Card className="border-border shadow-sm h-full">
                   <CardHeader className="pb-3 border-b border-slate-100">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Target className="h-4 w-4 text-blue-600" />
-                        Unified Intelligence Feed
-                      </CardTitle>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Posts</span>
-                          <Select value={postsSort} onValueChange={(v) => setPostsSort(v as any)}>
-                            <SelectTrigger className="h-8 w-[110px] text-xs border-border">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="recent" className="text-xs">Recent</SelectItem>
-                              <SelectItem value="top" className="text-xs">Top</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Comments</span>
-                          <Select value={commentsSort} onValueChange={(v) => setCommentsSort(v as any)}>
-                            <SelectTrigger className="h-8 w-[110px] text-xs border-border">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="recent" className="text-xs">Recent</SelectItem>
-                              <SelectItem value="top" className="text-xs">Top</SelectItem>
-                            </SelectContent>
-                          </Select>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <Target className="h-4 w-4 text-blue-600" />
+                          Unified Intelligence Feed
+                        </CardTitle>
+                        
+                        <div className="flex items-center gap-2 ml-auto">
+                          <div className="flex items-center gap-1.5 bg-muted p-1 rounded-lg border border-border">
+                            <Button 
+                              variant={feedView === 'all' ? 'default' : 'ghost'} 
+                              size="sm" 
+                              className="h-7 text-[10px] px-2.5" 
+                              onClick={() => setFeedView('all')}
+                            >
+                              All
+                            </Button>
+                            <Button 
+                              variant={feedView === 'recent20' ? 'default' : 'ghost'} 
+                              size="sm" 
+                              className="h-7 text-[10px] px-2.5" 
+                              onClick={() => setFeedView('recent20')}
+                            >
+                              Recent 20
+                            </Button>
+                            <Button 
+                              variant={feedView === 'top20' ? 'default' : 'ghost'} 
+                              size="sm" 
+                              className="h-7 text-[10px] px-2.5" 
+                              onClick={() => setFeedView('top20')}
+                            >
+                              Top 20
+                            </Button>
+                          </div>
+                          
+                          <Separator orientation="vertical" className="h-6 mx-1" />
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Posts</span>
+                            <Select value={postsSort} onValueChange={(v) => setPostsSort(v as any)}>
+                              <SelectTrigger className="h-8 w-[90px] text-[10px] border-border">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="recent" className="text-xs">Recent</SelectItem>
+                                <SelectItem value="top" className="text-xs">Top</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Comments</span>
+                            <Select value={commentsSort} onValueChange={(v) => setCommentsSort(v as any)}>
+                              <SelectTrigger className="h-8 w-[90px] text-[10px] border-border">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="recent" className="text-xs">Recent</SelectItem>
+                                <SelectItem value="top" className="text-xs">Top</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
-                    </div>
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

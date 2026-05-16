@@ -322,7 +322,7 @@ const CommunityAnalysis = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Community Search
+              Community Analysis
             </CardTitle>
             <CardDescription>
               Enter a subreddit name to analyze (e.g., "technology", "AskReddit")

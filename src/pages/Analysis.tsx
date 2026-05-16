@@ -84,8 +84,8 @@ const Analysis = () => {
   const [communityPostsFilter, setCommunityPostsFilter] = useState<'recent20' | 'top20'>('recent20');
   const [sentimentFilter, setSentimentFilter] = useState<'all' | 'positive' | 'neutral' | 'negative'>('all');
   const [expandedEvidence, setExpandedEvidence] = useState<Set<number>>(new Set());
-  const [deepAnalysisData, setDeepAnalysisData] = useState<{[key: number]: any}>({});
-  const [loadingDeepAnalysis, setLoadingDeepAnalysis] = useState<{[key: number]: boolean}>({});
+  const [deepAnalysisData, setDeepAnalysisData] = useState<{[key: string]: any}>({});
+  const [loadingDeepAnalysis, setLoadingDeepAnalysis] = useState<{[key: string]: boolean}>({});
 
   const fetchSavedAnalyses = useCallback(async () => {
     if (!currentCase?.id) { setSavedKeyword([]); setSavedCommunity([]); setSavedLink([]); return; }
@@ -104,10 +104,10 @@ const Analysis = () => {
   }, [currentCase?.id]);
 
   // Fetch deep analysis for a post - directly from Python server (like UserProfiling)
-  const fetchDeepAnalysis = useCallback(async (postIndex: number, text: string) => {
-    if (loadingDeepAnalysis[postIndex] || deepAnalysisData[postIndex]) return;
+  const fetchDeepAnalysis = useCallback(async (postId: string, text: string, postObj?: any) => {
+    if (loadingDeepAnalysis[postId] || deepAnalysisData[postId]) return;
     
-    setLoadingDeepAnalysis(prev => ({ ...prev, [postIndex]: true }));
+    setLoadingDeepAnalysis(prev => ({ ...prev, [postId]: true }));
     try {
       const hfResult = await analyzeDeep(text);
 
@@ -118,19 +118,26 @@ const Analysis = () => {
             contribution: w.importance
           }))
         },
-        confidence: hfResult.confidence
+        confidence: hfResult.confidence,
+        sentiment: hfResult.sentiment
       };
       
       if (result?.deep_explanation) {
         setDeepAnalysisData(prev => ({ 
           ...prev, 
-          [postIndex]: result.deep_explanation 
+          [postId]: result.deep_explanation 
         }));
+        
+        // If the post didn't have a sentiment, update it now
+        if (postObj && !postObj._sentiment) {
+          postObj._sentiment = hfResult.sentiment;
+          postObj._sentimentExplanation = result.deep_explanation;
+        }
       }
     } catch (err) {
       console.error('Deep analysis error:', err);
     } finally {
-      setLoadingDeepAnalysis(prev => ({ ...prev, [postIndex]: false }));
+      setLoadingDeepAnalysis(prev => ({ ...prev, [postId]: false }));
     }
   }, [loadingDeepAnalysis, deepAnalysisData]);
 
@@ -550,7 +557,7 @@ const Analysis = () => {
         const analysisData = await analyzeWithTimeout(
           postsForAnalysis,
           [],
-          30000
+          60000 // 60 seconds for community analysis batch
         );
 
         if (analysisData) {
@@ -1063,7 +1070,7 @@ const Analysis = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-forensic-accent" />
-                Community Search
+                Community Analysis
               </CardTitle>
               <CardDescription>
                 Enter a subreddit name to analyze (e.g., "technology", "AskReddit")
@@ -1530,8 +1537,9 @@ const Analysis = () => {
                                                     variant="outline"
                                                     size="sm"
                                                     className="h-5 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50"
-                                                    disabled={loadingDeepAnalysis[index]}
+                                                    disabled={loadingDeepAnalysis[post.id || index]}
                                                     onClick={() => {
+                                                      const postId = post.id || index;
                                                       const newExpanded = new Set(expandedEvidence);
                                                       const isCurrentlyExpanded = newExpanded.has(index);
                                                       
@@ -1540,16 +1548,16 @@ const Analysis = () => {
                                                       } else {
                                                         newExpanded.add(index);
                                                         // Fetch deep analysis if not already loaded
-                                                        const hasDeepData = deepAnalysisData[index]?.word_contributions?.length > 0;
+                                                        const hasDeepData = deepAnalysisData[postId]?.word_contributions?.length > 0;
                                                         const hasBasicData = explanation?.word_contributions?.length > 0;
                                                         if (!hasDeepData && !hasBasicData) {
-                                                          fetchDeepAnalysis(index, `${post.title} ${post.selftext || ''}`);
+                                                          fetchDeepAnalysis(postId, `${post.title} ${post.selftext || ''}`, post);
                                                         }
                                                       }
                                                       setExpandedEvidence(newExpanded);
                                                     }}
                                                   >
-                                                    {loadingDeepAnalysis[index] ? (
+                                                    {loadingDeepAnalysis[post.id || index] ? (
                                                       <>
                                                         <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />
                                                         Analyzing...
@@ -1562,7 +1570,7 @@ const Analysis = () => {
                                                     ) : (
                                                       <>
                                                         <Brain className="h-2.5 w-2.5 mr-1" />
-                                                        Show Details
+                                                        {post._sentiment ? 'Show Details' : 'Analyze Now'}
                                                       </>
                                                     )}
                                                   </Button>
