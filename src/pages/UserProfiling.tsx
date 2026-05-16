@@ -1301,22 +1301,32 @@ const UserProfiling = () => {
     };
   }, [baseSortedComments]);
 
-  // Final sorted/filtered feeds for display
+  // Final sorted/filtered feeds for display - now filtering first, then sorting, then slicing
   const sortedPosts = useMemo(() => {
-    let arr = [...baseSortedPosts];
+    let arr = [...(profileData?.postSentiments || [])];
     if (postSentimentFilter) {
       arr = arr.filter(item => item.sentiment === postSentimentFilter);
     }
-    return arr;
-  }, [baseSortedPosts, postSentimentFilter]);
+    if (postsSort === 'top') {
+      arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    } else if (postsSort === 'recent') {
+      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
+    }
+    return arr.slice(0, 20); // Keep top 20 of the filtered results
+  }, [profileData?.postSentiments, postSentimentFilter, postsSort]);
 
   const sortedComments = useMemo(() => {
-    let arr = [...baseSortedComments];
+    let arr = [...(profileData?.commentSentiments || [])];
     if (commentSentimentFilter) {
       arr = arr.filter(item => item.sentiment === commentSentimentFilter);
     }
-    return arr;
-  }, [baseSortedComments, commentSentimentFilter]);
+    if (commentsSort === 'top') {
+      arr.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+    } else if (commentsSort === 'recent') {
+      arr.sort((a, b) => (b.created_utc ?? 0) - (a.created_utc ?? 0));
+    }
+    return arr.slice(0, 20); // Keep top 20 of the filtered results
+  }, [profileData?.commentSentiments, commentSentimentFilter, commentsSort]);
 
   const renderSentimentRow = (item: any, itemKey: string, isPost: boolean) => {
     const deepState = deepAnalysisStates.get(itemKey);
@@ -2046,10 +2056,6 @@ const UserProfiling = () => {
                                 innerRadius={26}
                                 outerRadius={45}
                                 paddingAngle={2}
-                                onClick={(data) => {
-                                  const sentiment = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
-                                  setPostSentimentFilter(prev => prev === sentiment ? null : sentiment);
-                                }}
                                 className="cursor-pointer"
                               >
                                 {sentimentPieData(dynamicPostSentimentBreakdown).map((d, i) => (
@@ -2059,6 +2065,10 @@ const UserProfiling = () => {
                                     stroke={postSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
                                     strokeWidth={postSentimentFilter === d.name.toLowerCase() ? 3 : 0}
                                     opacity={postSentimentFilter && postSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
+                                    onClick={() => {
+                                      const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                      setPostSentimentFilter(prev => prev === sentiment ? null : sentiment);
+                                    }}
                                   />
                                 ))}
                               </Pie>
@@ -2095,10 +2105,6 @@ const UserProfiling = () => {
                                 innerRadius={26}
                                 outerRadius={45}
                                 paddingAngle={2}
-                                onClick={(data) => {
-                                  const sentiment = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
-                                  setCommentSentimentFilter(prev => prev === sentiment ? null : sentiment);
-                                }}
                                 className="cursor-pointer"
                               >
                                 {sentimentPieData(dynamicCommentSentimentBreakdown).map((d, i) => (
@@ -2108,6 +2114,10 @@ const UserProfiling = () => {
                                     stroke={commentSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
                                     strokeWidth={commentSentimentFilter === d.name.toLowerCase() ? 3 : 0}
                                     opacity={commentSentimentFilter && commentSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
+                                    onClick={() => {
+                                      const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                      setCommentSentimentFilter(prev => prev === sentiment ? null : sentiment);
+                                    }}
                                   />
                                 ))}
                               </Pie>

@@ -22,6 +22,7 @@ interface UserCommunityNetworkGraphProps {
   title: string;
   nodes: NetworkNode[];
   links: NetworkLink[];
+  primaryUserId?: string;
   onCommunityClick?: (communityName: string) => void;
   onAnalyzeCommunity?: (communityName: string) => void;
   height?: number;
@@ -41,9 +42,16 @@ interface SimulatedLink {
   weight: number;
 }
 
-const nodeGradients: Record<string, { start: string; end: string }> = {
-  user: { start: '#10B981', end: '#059669' },
-  community: { start: '#3B82F6', end: '#2563EB' },
+const getNodeColors = (type: string, theme: string, isPrimary: boolean) => {
+  if (isPrimary) {
+    return { start: '#10B981', end: '#059669', glow: 'rgba(16, 185, 129, 0.4)' }; // Subject Green
+  }
+  if (type === 'community') {
+    return { start: '#3B82F6', end: '#2563EB', glow: 'rgba(59, 130, 246, 0.4)' }; // Related Blue
+  }
+  return theme === 'dark' 
+    ? { start: '#94A3B8', end: '#64748B', glow: 'rgba(148, 163, 184, 0.2)' } 
+    : { start: '#64748B', end: '#475569', glow: 'rgba(100, 116, 139, 0.2)' };
 };
 
 export const UserCommunityNetworkGraph = ({ 
@@ -442,8 +450,11 @@ export const UserCommunityNetworkGraph = ({
 
       // Draw links
       allLinks.forEach(link => {
-        const sColors = nodeGradients[link.source.type] || { start: '#64748b', end: '#475569' };
-        const tColors = nodeGradients[link.target.type] || { start: '#64748b', end: '#475569' };
+        const isSPrimary = link.source.id === primaryUserId || link.source.label.toLowerCase() === primaryUserId?.toLowerCase();
+        const isTPrimary = link.target.id === primaryUserId || link.target.label.toLowerCase() === primaryUserId?.toLowerCase();
+        
+        const sColors = getNodeColors(link.source.type, theme, isSPrimary);
+        const tColors = getNodeColors(link.target.type, theme, isTPrimary);
 
         const gradient = ctx.createLinearGradient(link.source.x, link.source.y, link.target.x, link.target.y);
         gradient.addColorStop(0, sColors.start + '60');
@@ -470,15 +481,15 @@ export const UserCommunityNetworkGraph = ({
       // Draw nodes
       allNodes.forEach(node => {
         const size = node.size || 30;
-        const isPrimary = node.id === primaryUserId;
-        const colors = nodeGradients[node.type] || { start: '#64748b', end: '#475569' };
+        const isPrimary = node.id === primaryUserId || node.label.toLowerCase() === primaryUserId?.toLowerCase();
+        const colors = getNodeColors(node.type, theme, isPrimary);
 
         // Glow
-        const glowGradient = ctx.createRadialGradient(node.x, node.y, size * 0.5, node.x, node.y, size * 2);
-        glowGradient.addColorStop(0, colors.start + '40');
+        const glowGradient = ctx.createRadialGradient(node.x, node.y, size * 0.5, node.x, node.y, size * 2.5);
+        glowGradient.addColorStop(0, colors.glow || colors.start + '40');
         glowGradient.addColorStop(1, 'transparent');
         ctx.beginPath();
-        ctx.arc(node.x, node.y, size * 2, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, size * 2.5, 0, Math.PI * 2);
         ctx.fillStyle = glowGradient;
         ctx.fill();
 
@@ -627,18 +638,18 @@ export const UserCommunityNetworkGraph = ({
             </div>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}></div>
-            <span className="text-muted-foreground">Users</span>
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-6 px-8 py-3 bg-card/80 backdrop-blur-xl rounded-2xl border border-border/50 shadow-2xl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }}></div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Subject</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full" style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}></div>
-            <span className="text-muted-foreground">Communities</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}></div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Associated</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full border-2 border-dashed border-yellow-400" style={{ width: 16, height: 16 }}></div>
-            <span className="text-muted-foreground">Pinned (dragged)</span>
+          <div className="flex items-center gap-2.5 opacity-50">
+            <div className="w-4 h-4 rounded-full border-2 border-dashed border-yellow-500" style={{ width: 16, height: 16 }}></div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Pinned</span>
           </div>
         </div>
       </CardContent>

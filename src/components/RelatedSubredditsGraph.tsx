@@ -38,8 +38,8 @@ interface GraphLink {
 }
 
 const nodeColors = {
-  center: { start: '#3B82F6', end: '#1D4ED8' },
-  related: { start: '#8B5CF6', end: '#6D28D9' },
+  center: { start: '#10B981', end: '#059669' }, // Green - matching Primary User in LinkAnalysis
+  related: { start: '#3B82F6', end: '#2563EB' }, // Blue - matching Communities in LinkAnalysis
 };
 
 export const RelatedSubredditsGraph = ({
@@ -577,11 +577,11 @@ export const RelatedSubredditsGraph = ({
       {/* Legend */}
       <div className="mt-1 flex flex-wrap gap-4 justify-center text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' }} />
-          <span className="text-muted-foreground">Selected</span>
+          <div className="w-4 h-4 rounded-full" style={{ background: 'linear-gradient(135deg, #10B981, #059669)' }} />
+          <span className="text-muted-foreground">Primary</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full" style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' }} />
+          <div className="w-4 h-4 rounded-full" style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }} />
           <span className="text-muted-foreground">Related</span>
         </div>
         <div className="flex items-center gap-2">

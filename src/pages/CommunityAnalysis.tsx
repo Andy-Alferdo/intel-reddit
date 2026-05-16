@@ -1,6 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
-import { Search, Users, Calendar, Shield, MessageSquare, Loader2, TrendingUp, UserCheck, Activity, Eye, CheckCircle } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { 
+  Search, Users, Calendar, Shield, MessageSquare, Loader2, TrendingUp, 
+  UserCheck, Activity, Eye, CheckCircle, BarChart3, Info, Hash, 
+  ExternalLink, Brain, ChevronDown, Trash2, User, Globe, Share2, Network,
+  ThumbsUp, Target, Zap, Clock, MoreVertical, UserPlus
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +20,12 @@ import { toast } from "sonner";
 import { useInvestigation } from "@/contexts/InvestigationContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ExternalLink } from "lucide-react";
+import { toZonedTime, format as formatTz } from "date-fns-tz";
+import { 
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid
+} from "recharts";
+import { analyzeDeep, analyzeWithHuggingFace } from '@/integrations/huggingface/client';
 
 interface SubredditData {
   display_name: string;
@@ -39,6 +49,8 @@ interface RedditPost {
   num_comments: number;
   permalink: string;
   subreddit: string;
+  _sentiment?: 'positive' | 'negative' | 'neutral';
+  _sentimentExplanation?: any;
 }
 
 interface RelatedSub {
@@ -50,6 +62,7 @@ interface RelatedSub {
 const CommunityAnalysis = () => {
   const { saveRedditContentToDb, communityAnalyses } = useInvestigation();
   const location = useLocation();
+  const navigate = useNavigate();
   const [subreddit, setSubreddit] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -58,6 +71,12 @@ const CommunityAnalysis = () => {
   const [relatedSubreddits, setRelatedSubreddits] = useState<RelatedSub[]>([]);
   const [activeUsers, setActiveUsers] = useState(0);
   const [previewPost, setPreviewPost] = useState<RedditPost | null>(null);
+  
+  // New states for standardized UI
+  const [sentimentFilter, setSentimentFilter] = useState<'all' | 'positive' | 'negative' | 'neutral'>('all');
+  const [communityPostsFilter, setCommunityPostsFilter] = useState<'recent20' | 'top20'>('recent20');
+  const [expandedEvidence, setExpandedEvidence] = useState<Set<number>>(new Set());
+  const [isAnalyzingSentiment, setIsAnalyzingSentiment] = useState(false);
   
   // Ref to store pending navigation actions
   const pendingNavRef = useRef<{ prefillCommunity: string; viewOnly?: boolean; autoAnalyze?: boolean } | null>(null);
@@ -240,6 +259,66 @@ const CommunityAnalysis = () => {
     return [...posts].sort((a, b) => b.score - a.score).slice(0, 5);
   }, [posts]);
 
+  const formatTzTimestamp = (utc?: number): string => {
+    if (!utc) return '';
+    const date = new Date(utc * 1000);
+    const dateStr = format(date, 'MMM d, yyyy');
+    const pktTime = formatTz(toZonedTime(date, 'Asia/Karachi'), 'hh:mm a');
+    const utcTime = formatTz(toZonedTime(date, 'UTC'), 'hh:mm a');
+    return `${dateStr} | ${pktTime} PKT | ${utcTime} UTC`;
+  };
+
+  const sentimentTone = (s?: string) => {
+    if (s === 'positive') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    if (s === 'negative') return 'bg-rose-50 text-rose-700 border-rose-200';
+    return 'bg-slate-50 text-slate-700 border-slate-200';
+  };
+
+  const getSentimentColor = (sent: string) => {
+    switch (sent?.toLowerCase()) {
+      case 'positive': return 'bg-green-100 text-green-700 border-green-300';
+      case 'negative': return 'bg-red-100 text-red-700 border-red-300';
+      default: return 'bg-gray-100 text-gray-700 border-gray-300';
+    }
+  };
+
+  const getBarColor = (contribution: number) => {
+    if (contribution > 0) return 'bg-green-500';
+    if (contribution < 0) return 'bg-red-500';
+    return 'bg-gray-400';
+  };
+
+  const getPullDirection = (contribution: number) => {
+    if (contribution > 0) return 'pull positive';
+    if (contribution < 0) return 'pull negative';
+    return 'neutral';
+  };
+
+  const getPullColor = (contribution: number) => {
+    if (contribution > 0) return 'text-green-600';
+    if (contribution < 0) return 'text-red-600';
+    return 'text-gray-500';
+  };
+
+  const filterTokens = (tokens: any[]) => {
+    const stopWords = new Set(['is', 'in', 'the', 'a', 'an', 'we', 'this', 'that', 'has', 'are', 'was', 'were', 'been', 'have', 'had', 'do', 'does', 'did', 'but', 'or', 'and', 'for', 'to', 'of', 'with', 'by', 'at', 'on']);
+    return (tokens || [])
+      .filter(token => {
+        const score = Math.abs(token.contribution || token.score || token.weight || token.value || 0);
+        return !stopWords.has(token.word?.toLowerCase()) || score > 0.005;
+      })
+      .sort((a, b) => Math.abs(b.contribution || 0) - Math.abs(a.contribution || 0));
+  };
+
+  const toggleEvidence = (index: number) => {
+    setExpandedEvidence(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
   const handleSearch = useCallback(async (searchTerm?: string) => {
     const term = (searchTerm || subreddit).trim().replace(/^r\//, '');
     if (!term) return;
@@ -247,6 +326,7 @@ const CommunityAnalysis = () => {
     setSubreddit(term);
     setIsSearching(true);
     setHasSearched(false);
+    setSentimentFilter('all');
 
     try {
       const { data, error } = await supabase.functions.invoke('reddit-scraper', {
@@ -260,19 +340,48 @@ const CommunityAnalysis = () => {
         return;
       }
 
+      const fetchedPosts = data.posts || [];
       setSubredditData(data.subreddit);
-      setPosts(data.posts || []);
+      setPosts(fetchedPosts);
       setRelatedSubreddits(data.relatedSubreddits || []);
       setActiveUsers(data.activeUsers || data.weeklyVisitors || 0);
       setHasSearched(true);
       
+      // Perform sentiment analysis on posts
+      if (fetchedPosts.length > 0) {
+        setIsAnalyzingSentiment(true);
+        try {
+          const analyzed = await Promise.all(fetchedPosts.slice(0, 20).map(async (p: any) => {
+            try {
+              const res = await analyzeDeep(p.title + ' ' + (p.selftext || ''));
+              return { 
+                ...p, 
+                _sentiment: res.sentiment.toLowerCase(),
+                _sentimentExplanation: res.explanation || res
+              };
+            } catch {
+              return { ...p, _sentiment: 'neutral' };
+            }
+          }));
+          setPosts(prev => {
+            const updated = [...prev];
+            analyzed.forEach((ap, i) => {
+              updated[i] = ap;
+            });
+            return updated;
+          });
+        } catch (err) {
+          console.error('Sentiment analysis failed:', err);
+        } finally {
+          setIsAnalyzingSentiment(false);
+        }
+      }
+
       // Save Reddit content to database
       try {
         await saveRedditContentToDb(data.posts || [], data.comments || [], 'community_analysis');
-        console.log(`Community Analysis: Saved Reddit content for r/${term}`);
       } catch (error: any) {
         console.error('Community Analysis: Failed to save Reddit content:', error);
-        // Don't block the UI, just log the error
       }
     } catch (err: any) {
       console.error('Community analysis error:', err);
@@ -385,8 +494,8 @@ const CommunityAnalysis = () => {
                     <UserCheck className="h-5 w-5 text-violet-500" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Weekly Contributors</p>
-                    <p className="text-xl font-bold">{weeklyContributors}</p>
+                    <p className="text-xs text-muted-foreground">Top Contributors</p>
+                    <p className="text-xl font-bold">{topContributors.length}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -403,264 +512,533 @@ const CommunityAnalysis = () => {
               </Card>
             </div>
 
-            {/* Community Info + Recent Posts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-primary" />
-                    Community Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-lg">r/{subredditData.display_name}</h3>
-                    {subredditData.title && (
-                      <p className="text-sm text-muted-foreground">{subredditData.title}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="secondary">{formatNumber(subredditData.subscribers)} members</Badge>
-                      {subredditData.over18 && <Badge variant="destructive">NSFW</Badge>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    Created: {format(new Date(subredditData.created_utc * 1000), 'MMMM d, yyyy')}
-                  </div>
-                  <Separator />
-                  <div>
-                    <h4 className="font-medium mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {subredditData.public_description || 'No description available.'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5 text-primary" />
-                    Recent Posts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {recentPosts.map((post, i) => (
-                    <div
-                      key={i}
-                      className="block border border-border/50 rounded-lg p-3 space-y-2 hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => setPreviewPost(post)}
-                    >
-                      <h4 className="font-medium text-sm leading-tight line-clamp-2">{post.title}</h4>
-                      {post.selftext && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{post.selftext}</p>
+            {/* Community Info + Intelligence Feed */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-4 space-y-6">
+                <Card className="border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-primary" />
+                      Community Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">r/{subredditData.display_name}</h3>
+                      {subredditData.title && (
+                        <p className="text-sm text-muted-foreground">{subredditData.title}</p>
                       )}
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span className="hover:text-primary transition-colors">
-                          by u/{post.author}
-                        </span>
-                        <span>{formatTimestamp(post.created_utc)}</span>
-                      </div>
-                      {/* Reddit-style Voting Bar */}
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 bg-muted rounded-full px-2 py-1">
-                          <button 
-                            className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-orange-500 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12 4l-8 8h16l-8-8z"/>
-                            </svg>
-                          </button>
-                          <span className="text-[11px] font-semibold text-foreground min-w-[1.5rem] text-center">
-                            {post.score >= 1000 ? (post.score / 1000).toFixed(1) + 'K' : post.score || 0}
-                          </span>
-                          <button 
-                            className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-blue-400 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12 20l8-8H4l8 8z"/>
-                            </svg>
-                          </button>
-                        </div>
-                        <Badge variant="outline" className="text-xs">{post.num_comments} comments</Badge>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary">{formatNumber(subredditData.subscribers)} members</Badge>
+                        {subredditData.over18 && <Badge variant="destructive">NSFW</Badge>}
                       </div>
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Related Subreddits Graph */}
-            {relatedSubreddits.length > 0 && (
-              <RelatedSubredditsGraph
-                centerSubreddit={subredditData.display_name}
-                relatedSubreddits={relatedSubreddits}
-                onSubredditClick={handleSubredditClick}
-              />
-            )}
-
-            {/* Top Posts + Top Contributors */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Top Posts by Score
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {topPosts.map((post, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-3 border border-border/50 rounded-lg p-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                      onClick={() => setPreviewPost(post)}
-                    >
-                      <span className="text-lg font-bold text-primary min-w-[28px]">#{i + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm leading-tight line-clamp-2">{post.title}</h4>
-                        {post.selftext && (
-                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{post.selftext}</p>
-                        )}
-                        {/* Reddit-style Voting Bar */}
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="flex items-center gap-1 bg-muted rounded-full px-2 py-1">
-                            <button 
-                              className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-orange-500 transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 4l-8 8h16l-8-8z"/>
-                              </svg>
-                            </button>
-                            <span className="text-[11px] font-semibold text-foreground min-w-[1.5rem] text-center">
-                              {post.score >= 1000 ? (post.score / 1000).toFixed(1) + 'K' : post.score || 0}
-                            </span>
-                            <button 
-                              className="p-0.5 rounded hover:bg-background text-muted-foreground hover:text-blue-400 transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 20l8-8H4l8 8z"/>
-                              </svg>
-                            </button>
-                          </div>
-                          <span className="text-xs text-muted-foreground hover:text-primary transition-colors">
-                            u/{post.author}
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      Created: {format(new Date(subredditData.created_utc * 1000), 'MMMM d, yyyy')}
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
+                    <Separator />
+                    <div>
+                      <h4 className="font-medium mb-2">Description</h4>
+                      <p className="text-sm text-muted-foreground line-clamp-4">
+                        {subredditData.public_description || 'No description available.'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5 text-primary" />
-                    Top Contributors
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {topContributors.map((c, i) => (
-                      <div key={i} className="flex items-center justify-between border border-border/50 rounded-lg p-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold text-muted-foreground min-w-[24px]">#{i + 1}</span>
-                          <div>
-                            <a 
-                              href={`https://reddit.com/u/${c.author}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-medium text-sm hover:text-primary hover:underline transition-colors"
-                            >
-                              u/{c.author}
-                            </a>
-                            <p className="text-xs text-muted-foreground">{c.posts} posts</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">▲ {c.totalScore}</Badge>
+                {/* Sentiment Distribution Chart */}
+                <Card className="border-primary/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <BarChart3 className="h-4 w-4 text-primary" />
+                        Sentiment Distribution
+                      </CardTitle>
+                      {sentimentFilter !== 'all' && (
+                        <button 
+                          onClick={() => setSentimentFilter('all')}
+                          className="text-[10px] text-blue-500 hover:underline"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {isAnalyzingSentiment ? (
+                      <div className="h-40 flex flex-col items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <p className="text-[10px] text-muted-foreground">Analyzing sentiments...</p>
                       </div>
-                    ))}
-                    {topContributors.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">No contributor data available</p>
+                    ) : (
+                      (() => {
+                        const counts = { positive: 0, neutral: 0, negative: 0 };
+                        posts.slice(0, 20).forEach((post: any) => {
+                          if (post._sentiment) {
+                            counts[post._sentiment as keyof typeof counts]++;
+                          }
+                        });
+
+                        const total = posts.slice(0, 20).filter(p => p._sentiment).length || 1;
+                        const sentimentData = [
+                          { name: 'Positive', value: Math.round((counts.positive / total) * 100), color: '#10b981' },
+                          { name: 'Neutral', value: Math.round((counts.neutral / total) * 100), color: '#9ca3af' },
+                          { name: 'Negative', value: Math.round((counts.negative / total) * 100), color: '#ef4444' },
+                        ].filter(d => d.value > 0);
+
+                        if (sentimentData.length === 0) {
+                          return <div className="h-40 flex items-center justify-center text-[10px] text-muted-foreground">No sentiment data available</div>;
+                        }
+
+                        return (
+                          <div className="space-y-4">
+                            <div className="h-40">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={sentimentData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={35}
+                                    outerRadius={55}
+                                    dataKey="value"
+                                  >
+                                    {sentimentData.map((entry, index) => (
+                                      <Cell 
+                                        key={`cell-${index}`} 
+                                        fill={entry.color} 
+                                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                                        stroke={sentimentFilter === entry.name.toLowerCase() ? '#1e40af' : 'none'}
+                                        strokeWidth={2}
+                                        onClick={() => setSentimentFilter(sentimentFilter === entry.name.toLowerCase() ? 'all' : entry.name.toLowerCase() as any)}
+                                      />
+                                    ))}
+                                  </Pie>
+                                  <RTooltip formatter={(v: any) => `${v}%`} />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="flex justify-center gap-3 text-[10px] font-medium">
+                              {sentimentData.map((d) => (
+                                <div key={d.name} className="flex items-center gap-1 cursor-pointer" onClick={() => setSentimentFilter(d.name.toLowerCase() as any)}>
+                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
+                                  <span className={sentimentFilter === d.name.toLowerCase() ? 'text-primary font-bold' : 'text-slate-600'}>{d.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()
                     )}
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+
+                {/* Word Cloud Card */}
+                <Card className="border-primary/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Trending Topics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <WordCloud data={communityWordCloud} height={200} />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Intelligence Feed (80%) */}
+              <div className="lg:col-span-8 space-y-6">
+                <Card className="border-primary/20 shadow-[0_0_20px_rgba(59,130,246,0.05)]">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Activity className="h-4 w-4 text-primary" />
+                        Community Intelligence Feed
+                      </CardTitle>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground uppercase font-semibold">FEED:</span>
+                          <Badge 
+                            variant={communityPostsFilter === 'recent20' ? 'default' : 'outline'} 
+                            className="cursor-pointer text-[10px] h-6" 
+                            onClick={() => setCommunityPostsFilter('recent20')}
+                          >
+                            Recent
+                          </Badge>
+                          <Badge 
+                            variant={communityPostsFilter === 'top20' ? 'default' : 'outline'} 
+                            className="cursor-pointer text-[10px] h-6" 
+                            onClick={() => setCommunityPostsFilter('top20')}
+                          >
+                            Top
+                          </Badge>
+                        </div>
+                        {sentimentFilter !== 'all' && (
+                          <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-600 border-blue-100 flex items-center gap-1 h-6">
+                            Filtered: {sentimentFilter}
+                            <button onClick={() => setSentimentFilter('all')}>×</button>
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <ScrollArea className="h-[750px]">
+                      <div className="divide-y divide-border/50">
+                        {(() => {
+                          const sorted = [...posts].sort((a, b) => {
+                            if (communityPostsFilter === 'top20') return b.score - a.score;
+                            return b.created_utc - a.created_utc;
+                          }).slice(0, 20);
+
+                          const filtered = sentimentFilter === 'all' 
+                            ? sorted 
+                            : sorted.filter(p => p._sentiment === sentimentFilter);
+
+                          if (filtered.length === 0) {
+                            return (
+                              <div className="p-20 text-center text-muted-foreground">
+                                <Search className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                                <p className="text-sm">No posts match the "{sentimentFilter}" filter in the {communityPostsFilter === 'recent20' ? 'Recent' : 'Top'} feed.</p>
+                                <Button variant="link" size="sm" onClick={() => setSentimentFilter('all')} className="mt-2">
+                                  Clear Filter
+                                </Button>
+                              </div>
+                            );
+                          }
+
+                          return filtered.map((post, index) => {
+                            const isExpanded = expandedEvidence.has(index);
+                            const explanation = post._sentimentExplanation;
+                            const tokens = filterTokens(explanation?.word_contributions || explanation?.tokens || []);
+
+                            return (
+                              <div key={index} className="p-5 hover:bg-muted/30 transition-all border-l-4 border-l-transparent hover:border-l-primary/30">
+                                <div className="flex items-start gap-4">
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary text-sm font-bold shrink-0 border border-primary/20 shadow-sm">
+                                    {post.author.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                      <span className="font-bold text-sm hover:text-primary transition-colors cursor-pointer">u/{post.author}</span>
+                                      <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                        <Clock className="h-3 w-3" /> {formatTimestamp(post.created_utc)}
+                                      </span>
+                                      {post._sentiment && (
+                                        <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0 ml-auto border shadow-sm ${sentimentTone(post._sentiment)}`}>
+                                          {post._sentiment.toUpperCase()}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <h4 
+                                      className="font-bold text-base leading-tight cursor-pointer hover:text-primary transition-colors mb-2 line-clamp-2"
+                                      onClick={() => setPreviewPost(post)}
+                                    >
+                                      {post.title}
+                                    </h4>
+                                    {post.selftext && (
+                                      <p className="text-sm text-slate-600 line-clamp-3 mb-3 leading-relaxed bg-slate-50/30 p-2 rounded border border-slate-100/50">
+                                        {post.selftext}
+                                      </p>
+                                    )}
+
+                                    {/* Intelligence Analysis Block */}
+                                    {post._sentiment && (
+                                      <div className="mb-4 bg-card border border-border/60 rounded-xl overflow-hidden shadow-sm group">
+                                        <div className="px-3 py-2 bg-muted/30 border-b border-border/60 flex items-center justify-between">
+                                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                            <Brain className="h-3.5 w-3.5 text-primary" /> Forensic Analysis
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 px-2 text-[10px] font-bold text-primary hover:bg-primary/10"
+                                            onClick={() => toggleEvidence(index)}
+                                          >
+                                            {isExpanded ? (
+                                              <><ChevronDown className="h-3 w-3 mr-1 rotate-180 transition-transform" /> Hide Details</>
+                                            ) : (
+                                              <><ChevronDown className="h-3 w-3 mr-1 transition-transform" /> Show Details</>
+                                            )}
+                                          </Button>
+                                        </div>
+                                        {isExpanded && (
+                                          <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                                            {tokens.length > 0 && (
+                                              <div>
+                                                <div className="text-[9px] font-black text-slate-400 mb-3 uppercase tracking-tighter">Emotional Markers</div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                  {tokens.slice(0, 6).map((token: any, i: number) => {
+                                                    const score = token.contribution || token.score || 0;
+                                                    const absScore = Math.abs(score);
+                                                    const maxScore = Math.max(...tokens.map((t: any) => Math.abs(t.contribution || t.score || 0.1)));
+                                                    const width = (absScore / maxScore) * 100;
+                                                    return (
+                                                      <div key={i} className="flex items-center gap-2 bg-slate-50/50 p-1.5 rounded-lg border border-slate-100">
+                                                        <span className="text-[11px] font-bold w-20 truncate text-slate-700">{token.word}</span>
+                                                        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                                          <div className={`h-full ${getBarColor(score)} transition-all duration-500`} style={{ width: `${width}%` }} />
+                                                        </div>
+                                                        <span className={`text-[10px] font-black min-w-[32px] text-right ${getPullColor(score)}`}>
+                                                          {score > 0 ? '+POS' : '-NEG'}
+                                                        </span>
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+                                            )}
+                                            <div className="bg-blue-50/30 p-3 rounded-lg border border-blue-100/50">
+                                              <p className="text-xs text-slate-600 leading-relaxed italic">
+                                                "{explanation?.reasoning || 'AI-detected sentiment markers indicate a consistent tone throughout the content, reflecting specific user intent and behavioral patterns.'}"
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    <div className="flex items-center gap-5">
+                                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100/50 px-2 py-1 rounded-full">
+                                        <ThumbsUp className="h-3.5 w-3.5 text-orange-500" /> {post.score.toLocaleString()}
+                                      </div>
+                                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100/50 px-2 py-1 rounded-full">
+                                        <MessageSquare className="h-3.5 w-3.5 text-blue-500" /> {post.num_comments.toLocaleString()}
+                                      </div>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 ml-auto h-7 px-2"
+                                        asChild
+                                      >
+                                        <a href={`https://reddit.com${post.permalink}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                                          REDDIT LINK <ExternalLink className="h-3 w-3 ml-1" />
+                                        </a>
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Second Row KPIs and related subreddits */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="border-primary/20 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-base font-bold">
+                        <UserCheck className="h-4 w-4 text-primary" />
+                        Top Contributors
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-border/50">
+                        {topContributors.map((c, i) => (
+                          <div key={i} className="flex items-center justify-between p-3.5 hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-black text-slate-400 w-4">{i+1}</span>
+                              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                {c.author.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="text-sm font-bold text-slate-700">u/{c.author}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-[10px] font-bold bg-slate-100 text-slate-600">{c.posts} posts</Badge>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => navigate('/user-profiling', { state: { prefillUsername: c.author } })}>
+                                    <UserPlus className="h-4 w-4 mr-2" />
+                                    Analyze User
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-primary/20 shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2 text-base font-bold">
+                        <Network className="h-4 w-4 text-primary" />
+                        Related Network
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-5 flex flex-col items-center justify-center min-h-[250px]">
+                       {relatedSubreddits.length > 0 ? (
+                         <div className="w-full text-center">
+                            <div className="p-4 bg-primary/5 rounded-2xl mb-5 border border-primary/10">
+                              <p className="text-3xl font-black text-primary mb-1">{relatedSubreddits.length}</p>
+                              <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Network Associations</p>
+                            </div>
+                            <div className="flex flex-wrap justify-center gap-2 max-h-[120px] overflow-hidden">
+                              {relatedSubreddits.slice(0, 12).map((sub, i) => (
+                                <Badge 
+                                  key={i} 
+                                  variant="outline" 
+                                  className="cursor-pointer hover:bg-primary hover:text-white transition-all text-[10px] font-bold py-1"
+                                  onClick={() => handleSubredditClick(sub.name)}
+                                >
+                                  r/{sub.name}
+                                </Badge>
+                              ))}
+                              {relatedSubreddits.length > 12 && <span className="text-[10px] text-muted-foreground font-bold">+{relatedSubreddits.length - 12} more</span>}
+                            </div>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-6 text-primary text-[10px] font-black border-primary/30 hover:bg-primary/5 rounded-full px-6" 
+                              onClick={() => {
+                                const el = document.getElementById('network-graph-section');
+                                el?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                            >
+                              EXPLORE INTERACTIVE NETWORK
+                            </Button>
+                         </div>
+                       ) : (
+                         <div className="text-center opacity-40">
+                           <Network className="h-10 w-10 mx-auto mb-3" />
+                           <p className="text-xs font-bold italic">No associations detected.</p>
+                         </div>
+                       )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
 
-            {/* Analytics */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {communityWordCloud.length > 0 && (
-                <WordCloud words={communityWordCloud} title="Popular Topics" />
-              )}
-              {postFrequencyData.length > 0 && (
-                <AnalyticsChart
-                  data={postFrequencyData}
-                  title="Post Frequency (Last 7 Days)"
-                  type="line"
-                  height={250}
-                />
-              )}
+            {/* Network Graph Section */}
+            <div id="network-graph-section" className="pt-6">
+              <Card className="border-primary/20 shadow-2xl overflow-hidden rounded-2xl border-2">
+                <CardHeader className="bg-slate-50/80 border-b border-border/50 py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-xl font-black text-slate-800">
+                        <Network className="h-6 w-6 text-primary" />
+                        Community Association Network
+                      </CardTitle>
+                      <CardDescription className="font-medium">
+                        Visualizing forensic connections between r/{subredditData.display_name} and its network
+                      </CardDescription>
+                    </div>
+                    <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 font-bold">
+                      {relatedSubreddits.length + 1} NODES DETECTED
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0 bg-slate-950">
+                  <RelatedSubredditsGraph
+                    centerSubreddit={subredditData.display_name}
+                    relatedSubreddits={relatedSubreddits}
+                    onSubredditClick={handleSubredditClick}
+                  />
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
-
-        {!hasSearched && !isSearching && (
-          <Card className="border-primary/20">
-            <CardContent className="py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                Enter a subreddit name above to begin community analysis
-              </p>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
-      {/* Post Preview Dialog - matching Keyword Analysis design */}
+      {/* Item Preview Dialog - matching User Profiling design */}
       <Dialog open={!!previewPost} onOpenChange={(open) => !open && setPreviewPost(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col rounded-xl border-blue-100 shadow-xl">
-          <DialogHeader className="border-b border-blue-50 pb-3">
-            <DialogTitle className="text-base leading-snug flex items-center gap-2">
-              <span className="p-1 bg-blue-50 rounded text-blue-600">📄</span>
-              Post Preview
-            </DialogTitle>
-            <DialogDescription className="flex items-center gap-2 pt-1">
-              <Badge variant="outline" className="text-[10px] bg-slate-50 border-blue-100 text-blue-600">{previewPost?.subreddit}</Badge>
-              <span className="text-[10px] text-muted-foreground">
-                {previewPost?.created_utc ? format(new Date(previewPost.created_utc * 1000), 'MMM d, yyyy | hh:mm a') : ''}
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <p className="sr-only">Previewing post {previewPost?.title}</p>
-          <ScrollArea className="flex-1 max-h-[50vh] mt-4">
-            <div className="space-y-4 pr-4">
-              <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewPost?.title}</h3>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground font-medium">by</span>
-                <span className="text-blue-600 font-semibold">u/{previewPost?.author}</span>
-                <Badge variant="secondary" className="text-[10px] ml-auto bg-slate-100">▲ {previewPost?.score}</Badge>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col rounded-2xl border-blue-100 shadow-2xl p-0 gap-0">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <div className="flex items-center justify-between mb-4">
+              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30 font-bold uppercase tracking-widest text-[9px]">
+                r/{previewPost?.subreddit}
+              </Badge>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-100 uppercase">
+                <Clock className="h-3 w-3" /> {previewPost?.created_utc ? formatTzTimestamp(previewPost.created_utc) : ''}
               </div>
+            </div>
+            <h3 className="font-black text-xl leading-tight tracking-tight drop-shadow-sm line-clamp-3">{previewPost?.title}</h3>
+          </div>
+          
+          <ScrollArea className="flex-1 max-h-[50vh]">
+            <div className="p-6 space-y-6 pb-10">
+              <div className="flex items-center gap-4 py-3 px-4 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-sm shadow-sm">
+                  {previewPost?.author.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="text-sm font-black text-slate-800">u/{previewPost?.author}</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Post Author</div>
+                </div>
+                <div className="ml-auto text-right">
+                  <div className="text-lg font-black text-orange-600 flex items-center gap-1 justify-end">
+                    <ThumbsUp className="h-4 w-4" /> {previewPost?.score.toLocaleString()}
+                  </div>
+                  <div className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Impact Score</div>
+                </div>
+              </div>
+
               {previewPost?.selftext ? (
-                <div className="text-sm text-slate-700 leading-relaxed bg-slate-50/50 p-3 rounded-lg border border-slate-100 whitespace-pre-wrap">
-                  {previewPost.selftext}
+                <div className="space-y-3">
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Content Intelligence</div>
+                  <div className="text-sm text-slate-700 leading-relaxed bg-white p-5 rounded-2xl border border-slate-200 shadow-sm whitespace-pre-wrap font-medium">
+                    {previewPost.selftext}
+                  </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground italic bg-slate-50 p-3 rounded-lg border border-dashed border-slate-200">No additional content available.</p>
+                <div className="flex flex-col items-center justify-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-center">
+                  <Info className="h-8 w-8 text-slate-300 mb-3" />
+                  <p className="text-sm text-slate-400 font-bold italic">
+                    This intelligence package contains only a title or media link.
+                  </p>
+                </div>
+              )}
+              
+              {previewPost?._sentiment && (
+                <div className={`p-5 rounded-2xl border shadow-md transition-all ${sentimentTone(previewPost._sentiment)}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-1.5 rounded-lg bg-white/50 border border-current">
+                      <Brain className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Sentiment Verdict</div>
+                      <div className="text-sm font-black uppercase tracking-tighter">{previewPost._sentiment} Tone Detected</div>
+                    </div>
+                    <Badge className="ml-auto font-black shadow-sm px-3">{previewPost._sentiment.toUpperCase()}</Badge>
+                  </div>
+                  <div className="bg-white/40 p-3 rounded-xl border border-current/10">
+                    <p className="text-xs leading-relaxed font-bold italic">
+                      "{previewPost._sentimentExplanation?.reasoning || 'Advanced AI analysis of the linguistic patterns indicates a ' + previewPost._sentiment + ' bias in this communication.'}"
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </ScrollArea>
-          <div className="pt-4 mt-2 border-t border-slate-100">
+          
+          <div className="p-6 bg-slate-50 border-t border-slate-200 flex gap-3">
             <Button 
-              className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-md transition-all shadow-blue-200"
-              onClick={() => window.open(`https://reddit.com${previewPost?.permalink}`, '_blank')}
+              variant="outline"
+              className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 font-black uppercase tracking-widest text-xs"
+              onClick={() => setPreviewPost(null)}
+            >
+              Dismiss
+            </Button>
+            <Button 
+              className="flex-[2] h-12 gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xl transition-all shadow-blue-200 font-black uppercase tracking-widest text-xs"
+              onClick={() => previewPost?.permalink && window.open(`https://reddit.com${previewPost.permalink}`, '_blank')}
             >
               <ExternalLink className="h-4 w-4" />
-              View on Reddit
+              Analyze Source
             </Button>
           </div>
         </DialogContent>
