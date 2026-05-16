@@ -2058,19 +2058,21 @@ const UserProfiling = () => {
                                 paddingAngle={2}
                                 className="cursor-pointer"
                               >
-                                {sentimentPieData(dynamicPostSentimentBreakdown).map((d, i) => (
-                                  <Cell
-                                    key={i}
-                                    fill={d.color}
-                                    stroke={postSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
-                                    strokeWidth={postSentimentFilter === d.name.toLowerCase() ? 3 : 0}
-                                    opacity={postSentimentFilter && postSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
-                                    onClick={() => {
-                                      const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
-                                      setPostSentimentFilter(prev => prev === sentiment ? null : sentiment);
-                                    }}
-                                  />
-                                ))}
+                                {sentimentPieData(dynamicPostSentimentBreakdown).map((d, i) => {
+                                  const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                  const isActive = postSentimentFilter === sentiment;
+                                  return (
+                                    <Cell
+                                      key={`cell-post-${i}`}
+                                      fill={d.color}
+                                      stroke={isActive ? (theme === 'dark' ? '#60a5fa' : '#1e40af') : 'none'}
+                                      strokeWidth={isActive ? 3 : 0}
+                                      opacity={postSentimentFilter && !isActive ? 0.4 : 1}
+                                      className="transition-all duration-300"
+                                      onClick={() => setPostSentimentFilter(prev => prev === sentiment ? null : sentiment)}
+                                    />
+                                  );
+                                })}
                               </Pie>
                               <RTooltip formatter={(v: any) => `${v}%`} />
                             </PieChart>
@@ -2107,19 +2109,21 @@ const UserProfiling = () => {
                                 paddingAngle={2}
                                 className="cursor-pointer"
                               >
-                                {sentimentPieData(dynamicCommentSentimentBreakdown).map((d, i) => (
-                                  <Cell
-                                    key={i}
-                                    fill={d.color}
-                                    stroke={commentSentimentFilter === d.name.toLowerCase() ? '#1e40af' : 'none'}
-                                    strokeWidth={commentSentimentFilter === d.name.toLowerCase() ? 3 : 0}
-                                    opacity={commentSentimentFilter && commentSentimentFilter !== d.name.toLowerCase() ? 0.4 : 1}
-                                    onClick={() => {
-                                      const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
-                                      setCommentSentimentFilter(prev => prev === sentiment ? null : sentiment);
-                                    }}
-                                  />
-                                ))}
+                                {sentimentPieData(dynamicCommentSentimentBreakdown).map((d, i) => {
+                                  const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                  const isActive = commentSentimentFilter === sentiment;
+                                  return (
+                                    <Cell
+                                      key={`cell-comment-${i}`}
+                                      fill={d.color}
+                                      stroke={isActive ? (theme === 'dark' ? '#60a5fa' : '#1e40af') : 'none'}
+                                      strokeWidth={isActive ? 3 : 0}
+                                      opacity={commentSentimentFilter && !isActive ? 0.4 : 1}
+                                      className="transition-all duration-300"
+                                      onClick={() => setCommentSentimentFilter(prev => prev === sentiment ? null : sentiment)}
+                                    />
+                                  );
+                                })}
                               </Pie>
                               <RTooltip formatter={(v: any) => `${v}%`} />
                             </PieChart>
@@ -2167,9 +2171,9 @@ const UserProfiling = () => {
                     <Brain className="h-4 w-4 text-blue-600" /> Keyword Intelligence
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4" style={{ height: '400px', overflow: 'auto' }}>
+                <CardContent className="p-4">
                   {(profileData.wordCloud || []).length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-1.5">
                       {profileData.wordCloud.slice(0, 10).map((w: any, i: number) => {
                         const max = Math.max(...profileData.wordCloud.map((x: any) => x.frequency || 0));
                         const pct = max > 0 ? (w.frequency / max) * 100 : 0;
@@ -2178,9 +2182,8 @@ const UserProfiling = () => {
                             key={i}
                             className="transition-all duration-150 ease-in-out hover:bg-white/5 hover:border-l-[3px] hover:border-[#6366f1] border-l-[3px] border-transparent"
                             style={{
-                              padding: '8px 10px',
+                              padding: '6px 10px',
                               borderRadius: '8px',
-                              marginBottom: '4px'
                             }}
                           >
                             <div className="flex items-center justify-between mb-2">
@@ -2192,15 +2195,15 @@ const UserProfiling = () => {
                                   letterSpacing: '0.025em'
                                 }}
                               >
-                                {w.word.split('').join(' ')}
+                                {w.word}
                               </span>
                               <span
                                 className="font-mono"
                                 style={{
-                                  background: '#eff6ff',
-                                  color: '#3b82f6',
+                                  background: theme === 'dark' ? '#1e293b' : '#eff6ff',
+                                  color: theme === 'dark' ? '#60a5fa' : '#3b82f6',
                                   borderRadius: '999px',
-                                  padding: '2px 8px',
+                                  padding: '1px 8px',
                                   fontSize: '12px',
                                   fontWeight: '600'
                                 }}

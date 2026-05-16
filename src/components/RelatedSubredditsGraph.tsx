@@ -449,15 +449,17 @@ export const RelatedSubredditsGraph = ({
         const lbl = `r/${node.label}`;
         const lw = ctx.measureText(lbl).width + 12;
         const ly = node.y + s + 8;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        
+        ctx.fillStyle = theme === 'dark' ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)';
         ctx.beginPath();
-        ctx.roundRect(node.x - lw / 2, ly - 2, lw, 20, 4);
+        ctx.roundRect(node.x - lw / 2, ly - 2, lw, 22, 6);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+        ctx.strokeStyle = colors.start + '40';
         ctx.lineWidth = 1;
         ctx.stroke();
-        ctx.fillStyle = '#1e293b';
-        ctx.fillText(lbl, node.x, ly + 2);
+        
+        ctx.fillStyle = theme === 'dark' ? '#F8FAFC' : '#0F172A';
+        ctx.fillText(lbl, node.x, ly + 3);
       });
 
       ctx.restore();
@@ -465,18 +467,15 @@ export const RelatedSubredditsGraph = ({
       // Zoom indicator
       const scale = transformRef.current.scale;
       if (Math.abs(scale - 1) > 0.01) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillStyle = theme === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)';
         ctx.beginPath();
-        ctx.roundRect(width - 80, 10, 70, 24, 6);
+        ctx.roundRect(width - 90, 20, 70, 28, 8);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.fillStyle = '#1e293b';
-        ctx.font = '11px system-ui';
+        ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
+        ctx.font = 'bold 12px system-ui';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${Math.round(scale * 100)}%`, width - 45, 22);
+        ctx.fillText(`${Math.round(scale * 100)}%`, width - 55, 34);
       }
     };
 
@@ -493,7 +492,7 @@ export const RelatedSubredditsGraph = ({
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [centerSubreddit, relatedSubreddits, dimensions]);
+  }, [centerSubreddit, relatedSubreddits, dimensions, theme]);
 
   return (
     <div ref={containerRef} className="w-full h-full">
