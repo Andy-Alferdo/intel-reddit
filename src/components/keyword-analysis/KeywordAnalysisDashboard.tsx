@@ -986,7 +986,7 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
             Keyword Analysis
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Enter a keyword or phrase to analyze across Reddit (e.g., "cybersecurity", "Asim Munir")
+            Enter a keyword or phrase to analyze across Reddit (e.g., "cybersecurity", "AI")
           </p>
         </CardHeader>
         <CardContent>
