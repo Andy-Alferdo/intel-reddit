@@ -2059,6 +2059,11 @@ const UserProfiling = () => {
                                 outerRadius={45}
                                 paddingAngle={2}
                                 className="cursor-pointer"
+                                onClick={(data: any) => {
+                                  if (!data?.name) return;
+                                  const clicked = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                  setPostSentimentFilter(prev => prev === clicked ? null : clicked);
+                                }}
                               >
                                 {sentimentPieData(dynamicPostSentimentBreakdown).map((d, i) => {
                                   const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
@@ -2071,7 +2076,6 @@ const UserProfiling = () => {
                                       strokeWidth={isActive ? 3 : 0}
                                       opacity={postSentimentFilter && !isActive ? 0.4 : 1}
                                       className="transition-all duration-300"
-                                      onClick={() => setPostSentimentFilter(prev => prev === sentiment ? null : sentiment)}
                                     />
                                   );
                                 })}
@@ -2110,6 +2114,11 @@ const UserProfiling = () => {
                                 outerRadius={45}
                                 paddingAngle={2}
                                 className="cursor-pointer"
+                                onClick={(data: any) => {
+                                  if (!data?.name) return;
+                                  const clicked = data.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
+                                  setCommentSentimentFilter(prev => prev === clicked ? null : clicked);
+                                }}
                               >
                                 {sentimentPieData(dynamicCommentSentimentBreakdown).map((d, i) => {
                                   const sentiment = d.name.toLowerCase() as 'positive' | 'negative' | 'neutral';
@@ -2122,7 +2131,6 @@ const UserProfiling = () => {
                                       strokeWidth={isActive ? 3 : 0}
                                       opacity={commentSentimentFilter && !isActive ? 0.4 : 1}
                                       className="transition-all duration-300"
-                                      onClick={() => setCommentSentimentFilter(prev => prev === sentiment ? null : sentiment)}
                                     />
                                   );
                                 })}
