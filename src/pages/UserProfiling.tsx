@@ -2376,29 +2376,29 @@ const UserProfiling = () => {
               </span>
               {previewItem?.isPost ? 'Post Preview' : 'Comment Preview'}
             </DialogTitle>
-            <DialogDescription className="flex items-center gap-2 pt-1">
-              <Badge variant="outline" className="text-[10px] bg-slate-50 border-blue-100 text-blue-600">
-                r/{previewItem?.subreddit}
-              </Badge>
-              <span className="text-[10px] text-muted-foreground">
-                {previewItem?.created_utc ? formatTimestamp(previewItem.created_utc) : ''}
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <p className="sr-only">Previewing {previewItem?.isPost ? 'post' : 'comment'}</p>
-          <ScrollArea className="flex-1 max-h-[50vh] mt-4">
-            <div className="space-y-4 pr-4">
-              {previewItem?.isPost && (
-                <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewItem?.title}</h3>
-              )}
-              {!previewItem?.isPost && previewItem?.link_title && (
-                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                  On post: {previewItem.link_title}
-                </div>
-              )}
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground font-medium">by</span>
-                <span className="text-blue-600 font-semibold">u/{profileData.username}</span>
+              <DialogDescription className="flex items-center gap-2 pt-1">
+                <Badge variant="outline" className="text-[10px] bg-slate-50 border-blue-100 text-blue-600">
+                  r/{previewItem?.subreddit}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">
+                  {previewItem?.created_utc ? formatTimestamp(previewItem.created_utc) : ''}
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+            <p className="sr-only">Detailed preview of the selected {previewItem?.isPost ? 'post' : 'comment'}.</p>
+            <ScrollArea className="flex-1 max-h-[50vh] mt-4">
+              <div className="space-y-4 pr-4">
+                {previewItem?.isPost && (
+                  <h3 className="font-bold text-sm text-foreground leading-relaxed">{previewItem?.title}</h3>
+                )}
+                {!previewItem?.isPost && previewItem?.link_title && (
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    On post: {previewItem.link_title}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-muted-foreground font-medium">by</span>
+                  <span className="text-blue-600 font-semibold">u/{profileData?.username || 'user'}</span>
                 <Badge variant="secondary" className="text-[10px] ml-auto bg-slate-100">
                   ▲ {previewItem?.score}
                 </Badge>
