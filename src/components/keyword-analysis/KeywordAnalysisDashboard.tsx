@@ -966,21 +966,6 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
         </div>
       )}
 
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Keyword Analysis</h2>
-          <p className="text-muted-foreground text-sm">
-            Track keywords across Reddit and analyze sentiment patterns
-          </p>
-        </div>
-        {keywordData && (
-          <Button variant="ghost" size="sm" className="gap-2 text-slate-600" onClick={() => { setKeywordData(null); setKeyword(''); }}>
-            <ArrowLeft className="h-4 w-4" /> Back to Search
-          </Button>
-        )}
-      </div>
-
       {/* Search Bar */}
       <Card className="border-primary/20 overflow-hidden relative">
         {/* Decorative design element */}
@@ -990,10 +975,17 @@ const KeywordAnalysisDashboard = ({ onBack }: KeywordAnalysisDashboardProps) => 
           </svg>
         </div>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Hash className="h-5 w-5 text-primary" />
-            Keyword Intelligence Search
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Hash className="h-5 w-5 text-primary" />
+              Keyword Analysis
+            </CardTitle>
+            {keywordData && (
+              <Button variant="ghost" size="sm" className="gap-2 text-slate-600 h-8" onClick={() => { setKeywordData(null); setKeyword(''); }}>
+                <ArrowLeft className="h-4 w-4" /> Back to Search
+              </Button>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">
             Enter a keyword or phrase to analyze across Reddit (e.g., "cybersecurity", "Asim Munir")
           </p>
