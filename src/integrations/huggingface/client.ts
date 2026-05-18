@@ -34,7 +34,15 @@ export interface SentimentItem {
   confidence?: number;
   all_probabilities?: Record<string, number>;
   text_preview?: string;
-  explanation?: string | { reasoning?: string; key_words?: string[] };
+  explanation?: string | {
+    reasoning?: string;
+    key_words?: string[];
+    word_contributions?: Array<{
+      word: string;
+      contribution: number;
+      sentiment_impact: string;
+    }>;
+  };
 }
 
 export interface AnalysisResult {
@@ -83,17 +91,21 @@ export async function analyzeWithHuggingFace(
     console.log('[HF Client] Post sentiments raw:', hfResult?.post_sentiments?.slice(0, 3));
     console.log('[HF Client] Comment sentiments raw:', hfResult?.comment_sentiments?.slice(0, 3));
 
-    // Transform snake_case to camelCase and add explanation field
+    // Transform snake_case to camelCase and map real word_importance as structured explanation
     const transformSentiment = (item: any): SentimentItem => ({
       sentiment: item.sentiment,
       confidence: item.confidence,
       all_probabilities: item.all_probabilities,
       text_preview: item.text_preview,
-      explanation: `Sentiment: ${item.sentiment} (confidence: ${Math.round((item.confidence || 0) * 100)}%). Key indicators: ${Object.entries(item.all_probabilities || {})
-        .sort(([,a], [,b]) => (b as number) - (a as number))
-        .slice(0, 2)
-        .map(([label, prob]) => `${label}: ${Math.round((prob as number) * 100)}%`)
-        .join(', ')}`
+      explanation: {
+        reasoning: `Sentiment: ${item.sentiment} (confidence: ${Math.round((item.confidence || 0) * 100)}%)`,
+        key_words: (item.word_importance || []).map((w: any) => w.word),
+        word_contributions: (item.word_importance || []).map((w: any) => ({
+          word: w.word,
+          contribution: w.importance,
+          sentiment_impact: w.sentiment_contribution,
+        })),
+      }
     });
 
     return {
